@@ -173,3 +173,4 @@ class GameFacade:
         
         self.manager.giocatori.append(player)
         return player
+    #prova1
