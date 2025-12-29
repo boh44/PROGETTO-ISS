@@ -1,11 +1,11 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
-
+import json
 # ==========================================
 # 1. PATTERN OBSERVER & MEMENTO (NUOVI)
 # ==========================================
-##provaaaa
+
 class Observer(ABC):
     @abstractmethod
     def update(self, subject: Subject) -> None:
@@ -39,10 +39,22 @@ class AutoSaveObserver(Observer):
         self.history: List[CharacterMemento] = []
 
     def update(self, subject: Subject) -> None:
-        # Appena riceve notifica, salva lo stato
         if isinstance(subject, Player):
             memento = subject.save_state()
             self.history.append(memento)
+            # Ogni volta che aggiorna la memoria, salviamo anche su file per sicurezza
+            self.salva_su_file()
+
+    def salva_su_file(self):
+        """Trasforma la history in JSON e la scrive su disco."""
+        try:
+            # Prendiamo solo l'ultimo stato di ogni giocatore per non appesantire il file
+            dati_da_salvare = [memento.get_state() for memento in self.history]
+            with open("salvataggio_gioco.json", "w") as f:
+                json.dump(dati_da_salvare, f, indent=4)
+            print("Log: Salvataggio su file completato.")
+        except Exception as e:
+            print(f"Errore durante il salvataggio: {e}")
 
 # ==========================================
 # 2. CLASSI PLAYER (MODIFICATE)
@@ -104,22 +116,37 @@ class Player2Creator(CharacterCreator):
 # 4. FUNZIONI LOGICA GIOCO (RIPRISTINATE)
 # ==========================================
 
-def valida_nome(player: Player, player_id: int) -> str:
-    nome = input(f"Inserisci il nome per il Personaggio {player_id}: ")
-    if nome.strip() == "":
-        if player_id == 1: nome = "Player1"
-        else: nome = "Player2"
-        print(f"Nome assegnato di default: {nome}")
-    player.nome = nome
-    return player.nome
+def valida_nome(nome: str, player_id: int) -> str:
+    nome = nome.strip()
+    if nome == "":
+        return "Player1" if player_id == 1 else "Player2"
+    return nome
 
-def assegna_moralita(player: Player):
-    # Nota: L'input deve essere esatto per funzionare
-    scelta = input("Che individuo sei davvero? Un eroe altruista, un mercenario egoista o un'anima indifferente? ")
-    if choice := scelta: # Assegnazione semplice per attivare il setter
-        if scelta == "eroe altruista": player.moralita += 8
-        elif scelta == "mercenario egoista": player.moralita += 3 
-        elif scelta == "anima indifferente": player.moralita += 5
+
+def assegna_moralita(player: Player, scelta_manuale: str = None):
+    # Se non viene passata una scelta, usiamo un valore neutro di default
+    # Se viene passata (dalla grafica), usiamo quella
+    scelta = scelta_manuale if scelta_manuale else "anima indifferente"
+    
+    if scelta == "eroe altruista": 
+        player.moralita += 8
+    elif scelta == "mercenario egoista": 
+        player.moralita += 3
+    elif scelta == "anima indifferente": 
+        player.moralita += 5
+"""def assegna_moralita(player: Player):
+    if scelta_moralita is None:
+        scelta_moralita = input(
+            f"{player.nome}, che individuo sei davvero? "
+            "Un eroe altruista, un mercenario egoista o un'anima indifferente? ")
+
+    # Assegna valori corretti
+    if scelta_moralita == "eroe altruista": 
+        player.moralita += 8
+    elif scelta_moralita == "mercenario egoista": 
+        player.moralita += 3
+    elif scelta_moralita == "anima indifferente": 
+        player.moralita += 5"""
 
 # ==========================================
 # 5. GAMEMANAGER & FACADE (INTEGRATI)
@@ -156,21 +183,63 @@ class GameManager:
         self.giocatori = []
         print("Log: Dati di gioco resettati.")
 
+#UNISCE GRAFICA E LOGICA
 class GameFacade:
-    def __init__(self):
-        self.manager = GameManager.get_instance()
-        # Qui istanziamo l'Observer che gestirà i salvataggi
-        self.auto_saver = AutoSaveObserver()
+    def __init__(self, manager, auto_saver=None):
+        self.manager = manager
+        self.auto_saver = auto_saver # Ora la Facade "sa" cos'è l'auto_saver
 
-    def crea_personaggio_completo(self, creator: CharacterCreator, player_id: int):
-        player = creator.create_character("", 0) 
-        
-        # COLLEGAMENTO FONDAMENTALE: Attacco l'observer al player
-        player.attach(self.auto_saver)
-
-        valida_nome(player, player_id)
-        assegna_moralita(player) # Qui scatterà l'AutoSave se la moralità cambia
-        
+    def crea_personaggio_completo(self, creator: CharacterCreator, player_corrente: int, nome_inserito: str = "", scelta_fatta: str = None):
+        # 1. Validazione del nome
+        nome_valido = valida_nome(nome_inserito, player_corrente)
+        # 2. Creazione del player (passiamo 0 come valore temporaneo per la moralità)
+        player = creator.create_character(nome_valido, 0)
+        # 3. CORREZIONE: Collega l'auto_saver solo se esiste
+        if self.auto_saver is not None:
+            player.attach(self.auto_saver)
+        # 4. Assegnazione della moralità reale scelta dall'utente
+        assegna_moralita(player, scelta_fatta)
+        # 5. Aggiunta al manager dei giocatori
         self.manager.giocatori.append(player)
         return player
-    #prova1
+    
+    def carica_ultimo_salvataggio(self):
+        """Ripristina lo stato dei giocatori dall'ultimo Memento disponibile."""
+        if not self.auto_saver or not self.auto_saver.history:
+            print("Log: Nessun salvataggio trovato.")
+            return False
+
+        # Esempio: ripristiniamo l'ultimo stato salvato per ogni giocatore
+      
+        for player in self.manager.giocatori:
+            # Cerchiamo nella cronologia l'ultimo memento che appartiene a questo player
+            for memento in reversed(self.auto_saver.history):
+                if memento.get_state()["nome"] == player.nome:
+                    player.restore_state(memento)
+                    print(f"Log: Ripristinato stato per {player.nome}")
+                    break
+        return True
+    
+    def carica_da_disco(self):
+        try:
+            with open("salvataggio_gioco.json", "r") as f:
+                dati = json.load(f)
+                if self.auto_saver:
+                    self.auto_saver.history = [CharacterMemento(d) for d in dati]
+                    
+                    # --- AGGIUNTA: Se i giocatori non ci sono, creali dai dati salvati ---
+                    if len(self.manager.giocatori) == 0:
+                        for d in dati:
+                            # Creiamo un Player1 o Player2 in base al numero di caricati
+                            nuovo_p = Player1(d["nome"], d["moralita"]) if len(self.manager.giocatori) == 0 else Player2(d["nome"], d["moralita"])
+                            nuovo_p.attach(self.auto_saver)
+                            self.manager.giocatori.append(nuovo_p)
+                    return True
+        except FileNotFoundError:
+            return False
+        
+    def esiste_salvataggio(self) -> bool:
+        """Controlla se esiste fisicamente il file di salvataggio."""
+        import os
+        return os.path.exists("salvataggio_gioco.json")
+    
