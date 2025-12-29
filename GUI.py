@@ -1,6 +1,6 @@
 import pygame
 import sys
-from logica import *
+from LogicaGioco import *
 from livelli import GestoreLivelli
 
 # --- 1. INIZIALIZZAZIONE ---
