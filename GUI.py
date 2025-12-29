@@ -21,7 +21,7 @@ def carica_asset(path, colore_fallback):
 
 # Carichiamo i "Master" una volta sola
 masters = {
-    "menu":   carica_asset('sfondo.jpeg', (40, 40, 40)),
+    "menu":   carica_asset('sfondo.png', (40, 40, 40)),
     "stanza": carica_asset('stanza.jpeg', (60, 60, 100)),
     "l0":     carica_asset('sfondo_livello0.jpeg', (20, 20, 20)),
     "mondi":  carica_asset('livello_1.jpeg', (0, 50, 0))
