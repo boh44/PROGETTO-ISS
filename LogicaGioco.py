@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 # ==========================================
 # 1. PATTERN OBSERVER & MEMENTO (NUOVI)
 # ==========================================
-
+##provaaaa
 class Observer(ABC):
     @abstractmethod
     def update(self, subject: Subject) -> None:
