@@ -30,6 +30,48 @@ class Subject(ABC):
         for observer in self._observers:
             observer.update(self)
 
+# ==========================================
+# 2. INVENTORY + ITERATOR (Spostato in alto per Player)
+# ==========================================
+
+class Item:
+    def __init__(self, nome: str, tipo: str, valore: int):
+        self.nome = nome
+        self.tipo = tipo  # "Cura", "Attacco", "Utility"
+        self.valore = valore
+
+    def __repr__(self):
+        return f"{self.nome}"
+
+class InventoryIterator(Iterator):
+    def __init__(self, items: List[Item]):
+        self._items = items
+        self._index = 0
+
+    def __next__(self) -> Item:
+        try:
+            item = self._items[self._index]
+            self._index += 1
+            return item
+        except IndexError:
+            raise StopIteration()
+
+class Inventory(Iterable):
+    def __init__(self):
+        self._items: List[Item] = []
+
+    def add_item(self, item: Item):
+        self._items.append(item)
+
+    def __iter__(self) -> InventoryIterator:
+        return InventoryIterator(self._items)
+    
+    def __len__(self):
+        return len(self._items)
+
+    def __repr__(self):
+        if not self._items: return "Vuoto"
+        return ", ".join([item.nome for item in self._items])
 
 # ==========================================
 # 3. MEMENTO
@@ -61,7 +103,7 @@ class AutoSaveObserver(Observer):
             print(f"Errore critico durante il salvataggio: {e}")
 
 # ==========================================
-# 4. PLAYER 
+# 4. PLAYER (Sincronizzato con Inventario)
 # ==========================================
 
 class Player(Subject, ABC):
@@ -71,6 +113,7 @@ class Player(Subject, ABC):
         self._moralita = moralita
         self._max_hp = 100
         self._hp = 100
+        self._inventario = Inventory()
 
     @property
     def moralita(self) -> int: return self._moralita
@@ -105,6 +148,7 @@ class Player(Subject, ABC):
             "moralita": self._moralita,
             "hp": self._hp,
             "max_hp": self._max_hp,
+            "inventario": nomi_item  # Salva gli item!
         })
 
     def restore_state(self, memento: CharacterMemento) -> None:
@@ -113,6 +157,13 @@ class Player(Subject, ABC):
         self._moralita = state["moralita"]
         self._hp = state.get("hp", 100)
         self._max_hp = state.get("max_hp", 100)
+        
+        # Ripristino oggetti
+        self._inventario = Inventory()
+        nomi_item = state.get("inventario", [])
+        for nome in nomi_item:
+            # Ricreiamo gli oggetti Item (valori predefiniti)
+            self._inventario.add_item(Item(nome, "Utility", 0))
 
 class Player1(Player):
     def __repr__(self): return f"Player1({self.nome}, HP={self.hp})"
