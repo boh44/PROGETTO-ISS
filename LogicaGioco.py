@@ -186,9 +186,9 @@ class Player1Creator(CharacterCreator):
 class Player2Creator(CharacterCreator):
     def factory_method(self, nome: str, moralita: int) -> Player2: return Player2(nome, moralita)
 
-# ==========================================
-# 6. MOSTRI
-# ==========================================
+# ==============================================================================
+# MOSTRI
+# ==============================================================================
 
 class Mostro(ABC):
     def __init__( self, nome: str, hp: int, danno: int, furtivita: int, intelligenza: int):
@@ -198,16 +198,82 @@ class Mostro(ABC):
         self.furtivita = furtivita
         self.intelligenza = intelligenza
 
-    def is_alive(self) -> bool: return self.hp > 0
+    def is_alive(self) -> bool:
+        return self.hp > 0
+
     def take_damage(self, amount: int) -> None:
-        self.hp = max(0, self.hp - amount)
+        self.hp -= amount
+        if self.hp < 0: self.hp = 0
 
     @abstractmethod
-    def attacca(self, player) -> None: pass
+    def attacca(self, player) -> None:
+        pass
+# ---------- CONCRETE PRODUCTS ----------
 
 class Goblin(Mostro):
-    def __init__(self): super().__init__("Goblin", 100, 10, 8, 4)
-    def attacca(self, player) -> None: player.take_damage(self.danno)
+    def __init__(self):
+        super().__init__( nome="Goblin", hp=40, danno=10, furtivita=8, intelligenza=4)
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
+
+class Anubi(Mostro):
+    def __init__(self):
+        super().__init__(nome="Anubi", hp=80, danno=15, furtivita=1, intelligenza=2)
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
+
+class Chica(Mostro):
+    def __init__(self):
+        super().__init__(nome="Chica",hp=100, danno=20, furtivita=8, intelligenza=4)
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
+
+class Yeti(Mostro):
+    def __init__(self):
+        super().__init__(nome="Yeti delle Nevi", hp=140, danno=30, furtivita=7, intelligenza=5)
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
+
+class SerpenteTreTeste(Mostro):
+    def __init__(self):
+        super().__init__(nome="Serpente a Tre Teste", hp=200, danno=70, furtivita=10, intelligenza=10)
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
+
+# ---------- CREATOR ----------
+class MostroCreator(ABC):
+    @abstractmethod
+    def factory_method(self) -> Mostro:
+        pass
+
+    def crea_mostro(self) -> Mostro:
+        return self.factory_method()
+
+# ---------- CONCRETE CREATORS ----------
+class GoblinCreator(MostroCreator):
+    def factory_method(self) -> Mostro:
+        return Goblin()
+
+class AnubiCreator(MostroCreator):
+    def factory_method(self) -> Mostro:
+        return Anubi()
+
+class ChicaCreator(MostroCreator):
+    def factory_method(self) -> Mostro:
+        return Chica()
+
+class YetiCreator(MostroCreator):
+    def factory_method(self) -> Mostro:
+        return Yeti()
+
+class SerpenteTreTesteCreator(MostroCreator):
+    def factory_method(self) -> Mostro:
+        return SerpenteTreTeste()
 
 # ==========================================
 # 7. GAMEMANAGER (SINGLETON)
