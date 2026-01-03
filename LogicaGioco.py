@@ -158,12 +158,19 @@ class Player(Subject, ABC):
         self._hp = state.get("hp", 100)
         self._max_hp = state.get("max_hp", 100)
         
-        # Ripristino oggetti
+        # RIPRISTINO INTELLIGENTE DELL'INVENTARIO
         self._inventario = Inventory()
-        nomi_item = state.get("inventario", [])
-        for nome in nomi_item:
-            # Ricreiamo gli oggetti Item (valori predefiniti)
-            self._inventario.add_item(Item(nome, "Utility", 0))
+        nomi_caricati = state.get("inventario", [])
+        
+        for nome in nomi_caricati:
+            # Assegniamo la categoria corretta in base al nome dell'oggetto
+            tipo = "Utility" # Valore di default
+            if nome.lower() == "spada":
+                tipo = "Attacco"
+            elif nome.lower() == "pozione":
+                tipo = "Cura"
+            
+            self._inventario.add_item(Item(nome, tipo, 20))
 
 class Player1(Player):
     def __repr__(self): return f"Player1({self.nome}, HP={self.hp})"
@@ -185,6 +192,7 @@ class Player1Creator(CharacterCreator):
     def factory_method(self, nome: str, moralita: int) -> Player1: return Player1(nome, moralita)
 class Player2Creator(CharacterCreator):
     def factory_method(self, nome: str, moralita: int) -> Player2: return Player2(nome, moralita)
+
 
 # ==============================================================================
 # MOSTRI
