@@ -60,37 +60,49 @@ class ToggleSelector:
         return False
 class InventoryUI:
     def __init__(self, x, y, player):
-        self.x = x             # Posizione orizzontale di partenza dell'HUD
-        self.y = y             # Posizione verticale
-        self.player = player   # Riferimento al giocatore proprietario
-        self.slot_size = 50    # Dimensione di ogni quadratino
-        self.padding = 10      # Spazio tra un quadratino e l'altro
-        self.font = pygame.font.SysFont("Arial", 12, bold=True)
-    def disegna(self, surface):
-        # Chiediamo l'iteratore all'inventario del giocatore
+        self.x = x
+        self.y = y
+        self.player = player
+        self.slot_size = 35 #dimensioni di ogni slot dell'inventario
+        self.padding = 5 #spazio tra uno slot e l'altro
+        self.font = pygame.font.SysFont("Arial", 11, bold=True)
+        self.font_cat = pygame.font.SysFont("Arial", 9, bold=True)
+        # Definiamo le categorie fisse
+        self.categorie = ["Attacco", "Cura", "Utility"]
+
+    def disegna(self, surface, categoria_attiva):
+        # 1. Disegna lo sfondo del rettangolo inventario
+        rect_bg = pygame.Rect(self.x - 5, self.y - 25, 150, 70) # Un box che contiene tutto
+        pygame.draw.rect(surface, (30, 30, 30), rect_bg, border_radius=5)
+        pygame.draw.rect(surface, (200, 200, 200), rect_bg, width=1, border_radius=5)
+
+        # 2. Disegna le scritte delle 3 categorie in alto
+        for i, cat in enumerate(self.categorie):
+            # Se la categoria è quella selezionata, usa il Giallo Oro, altrimenti Grigio
+            colore = (255, 215, 0) if cat.lower() == categoria_attiva.lower() else (150, 150, 150)
+            txt_cat = self.font_cat.render(cat.upper(), True, colore)
+            surface.blit(txt_cat, (self.x + (i * 45), self.y - 20))
+
+        # 3. Disegna gli oggetti filtrati
         it = iter(self.player._inventario)
         current_x = self.x
         
         while True:
             try:
-                # Chiediamo il prossimo oggetto
-                item = next(it) 
-                
-                # Disegniamo il quadratino dello slot
-                rect_slot = pygame.Rect(current_x, self.y, self.slot_size, self.slot_size)
-                pygame.draw.rect(surface, (60, 60, 60), rect_slot, border_radius=5)
-                pygame.draw.rect(surface, (200, 200, 200), rect_slot, width=2, border_radius=5)
-                
-                # Disegniamo il nome dell'oggetto (le prime 3 lettere)
-                txt_surf = self.font.render(item.nome[:3].upper(), True, (255, 255, 255))
-                surface.blit(txt_surf, (rect_slot.centerx - txt_surf.get_width()//2, 
-                                        rect_slot.centery - txt_surf.get_height()//2))
-                
-                # Spostiamo la X per il prossimo slot
-                current_x += self.slot_size + self.padding
-                
+                item = next(it)
+                if item.tipo.lower() == categoria_attiva.lower():
+                    rect_slot = pygame.Rect(current_x, self.y, self.slot_size, self.slot_size)
+                    pygame.draw.rect(surface, (50, 50, 50), rect_slot, border_radius=3)
+                    pygame.draw.rect(surface, (255, 215, 0), rect_slot, width=1, border_radius=3)
+                    # Bordo dorato per lo slot
+
+                    # Nome oggetto 
+                    txt = self.font.render(item.nome.upper(), True, (255, 255, 255))
+                    surface.blit(txt, (rect_slot.centerx - txt.get_width()//2, 
+                                       rect_slot.centery - txt.get_height()//2))
+                    
+                    current_x += self.slot_size + self.padding
             except StopIteration:
-                # Quando l'iteratore finisce gli oggetti, usciamo dal ciclo
                 break
 class HealthBar(Observer):
     """
@@ -144,7 +156,7 @@ masters = {
     "stanza": carica_asset('stanza.jpeg', (60, 60, 100)),
     "l0":     carica_asset('sfondo_livello0.jpeg', (20, 20, 20)),
     "mondi":  carica_asset('livello_1.jpeg', (0, 50, 0)),
-    "livello1": carica_asset('livello1_gameplay.jpeg', (30, 30, 30))
+    "livello1": carica_asset('sfondo_livello1.jpeg', (30, 30, 30))
 
 }
 sfondi = {}
@@ -173,6 +185,31 @@ hud = {
     "p2_health": None,
     "p2_inv": None
 }
+
+# Sotto la definizione di hud (riga 135 circa)
+hud_config = {
+    "show_inventory": False,
+    "categoria_selezionata": "Attacco" # Default
+}
+
+# --- 3. VARIABILI UI GLOBALI ---
+# (Sotto gli altri bottoni esistenti)
+
+# Il bottone centrale per le categorie
+btn_zaino = pygame.Rect(LARGHEZZA // 2 - 50, 20, 100, 35)
+
+# I bottoni quadrati per aprire gli inventari dei singoli player
+rect_btn_p1 = pygame.Rect(230, 15, 35, 35) 
+rect_btn_p2 = pygame.Rect(LARGHEZZA - 265, 15, 35, 35) 
+
+# Variabili di stato per sapere se i rettangoli sono aperti o chiusi
+inv_p1_aperto = False
+inv_p2_aperto = False
+
+# Gestione categorie
+categorie_disponibili = ["Attacco", "Cura", "Utility"]
+idx_cat_p1 = 0
+idx_cat_p2 = 0
 
 def sincronizza_hud():
     """Ricostruisce l'HUD basandosi sui giocatori attualmente nel manager"""
@@ -218,6 +255,18 @@ def aggiorna_posizioni_e_scale(w, h):
     btn_back_menu.topleft  = (x_c, h // 2 + 80)
     w_sel, h_sel = 600, 50
     rect_schermo = pygame.Rect((w - w_sel) // 2, h // 2 - 60, w_sel, h_sel)
+
+    # RIPOSIZIONAMENTO HUD DINAMICO
+    # Il tasto P1 rimane ancorato a sinistra (offset fisso)
+    rect_btn_p1.topleft = (230, 15)
+    # Il tasto P2 si ancora al bordo destro (W - offset)
+    rect_btn_p2.topleft = (w - 265, 15)
+
+    # Se l'HUD esiste già (partita in corso), aggiorna le barre della vita
+    if hud["p1_health"]:
+        hud["p1_health"].rect = pygame.Rect(20, 20, 200, 25)
+    if hud["p2_health"]:
+        hud["p2_health"].rect = pygame.Rect(w - 220, 20, 200, 25)
 
     def on_change_schermo(valore):
         if valore == "FULLSCREEN": pygame.display.set_mode((LARGHEZZA, ALTEZZA), pygame.FULLSCREEN)
@@ -383,23 +432,66 @@ while running:
                         stato_gioco = "MAPPA_MONDI"
                         input_nome_attivo = False
 
-            elif stato_gioco == "MAPPA_MONDI":
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    # Entriamo nel gioco
-                    stato_gioco = "GAMEPLAY"
-                    gestore_livelli.indice_corrente = 0
-                    sincronizza_hud()
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if stato_gioco == "GAMEPLAY":
+                    
+                    # --- PLAYER 1 ---
+                    # Controlliamo prima se l'inventario è aperto per catturare il click sulle TAB
+                    tab_p1_cliccata = False
+                    if inv_p1_aperto:
+                        # Zona Y delle linguette (tra 30 e 55)
+                        if 30 < pos_mouse[1] < 55:
+                            # Area Attacco (allargata per sicurezza)
+                            if 225 < pos_mouse[0] < 275: 
+                                idx_cat_p1 = 0
+                                tab_p1_cliccata = True
+                            # Area Cura
+                            elif 275 < pos_mouse[0] < 325: 
+                                idx_cat_p1 = 1
+                                tab_p1_cliccata = True
+                            # Area Utility
+                            elif 325 < pos_mouse[0] < 375: 
+                                idx_cat_p1 = 2
+                                tab_p1_cliccata = True
 
-                    # Inizializziamo l'HUD prendendo i dati REALI dal manager (sia da Carica che da Nuovo)
-                    if len(manager_gioco.giocatori) > 0:
-                        p1 = manager_gioco.giocatori[0]
-                        hud["p1_health"] = HealthBar(20, 20, 200, 25, p1)
-                        hud["p1_inv"] = InventoryUI(20, 55, p1)
-                        
-                    if len(manager_gioco.giocatori) > 1:
-                        p2 = manager_gioco.giocatori[1]
-                        hud["p2_health"] = HealthBar(LARGHEZZA - 220, 20, 200, 25, p2)
-                        hud["p2_inv"] = InventoryUI(LARGHEZZA - 220, 55, p2)
+                    # Se non abbiamo cliccato una TAB, allora controlliamo il pulsante INV
+                    if not tab_p1_cliccata and rect_btn_p1.collidepoint(pos_mouse):
+                        inv_p1_aperto = not inv_p1_aperto
+
+                   
+                # --- PLAYER 2 ---
+                tab_p2_cliccata = False
+                # Definiamo il punto di inizio X dell'inventario di P2
+                x_inv_p2 = LARGHEZZA - 305 
+                
+                if inv_p2_aperto:
+                    # Controllo zona Y delle linguette (30-55)
+                    if 30 < pos_mouse[1] < 55:
+                        # Area ATTACCO P2 (Allargata a 60 pixel per facilitare il tocco)
+                        if x_inv_p2 - 5 < pos_mouse[0] < x_inv_p2 + 55:
+                            idx_cat_p2 = 0
+                            tab_p2_cliccata = True
+                            print("Log: P2 Attacco selezionato")
+                        # Area CURA P2
+                        elif x_inv_p2 + 55 < pos_mouse[0] < x_inv_p2 + 105:
+                            idx_cat_p2 = 1
+                            tab_p2_cliccata = True
+                        # Area UTILITY P2
+                        elif x_inv_p2 + 105 < pos_mouse[0] < x_inv_p2 + 155:
+                            idx_cat_p2 = 2
+                            tab_p2_cliccata = True
+
+                # Solo se NON ho cliccato una tab, controllo se devo chiudere l'inventario
+                if not tab_p2_cliccata and rect_btn_p2.collidepoint(pos_mouse):
+                    inv_p2_aperto = not inv_p2_aperto
+
+                elif stato_gioco == "MAPPA_MONDI":
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        stato_gioco = "GAMEPLAY"
+                        gestore_livelli.indice_corrente = 0
+                        idx_cat_p1 = 0 # Reset
+                        idx_cat_p2 = 0 # Reset
+                        sincronizza_hud()
 
     # --- 6. DISEGNO ---
     sfondo = None
@@ -470,23 +562,42 @@ while running:
 
 
     elif stato_gioco == "GAMEPLAY":
-
-    # Sfondo diverso SOLO per il livello 1
+        # USO LO SFONDO SCALATO (sfondi invece di masters)
         if gestore_livelli.indice_corrente == 0:
             sfondo_gioco = sfondi["livello1"]
         else:
+            # mi assicuro che il gestore livelli restituisca una superficie scalata
             sfondo_gioco = gestore_livelli.get_livello_attuale()
-
+        
         screen.blit(sfondo_gioco, (0, 0))
 
-        # Barra vita SOLO nel livello 1
         if gestore_livelli.indice_corrente == 0:
+            # --- PLAYER 1 ---
+            cat_p1 = categorie_disponibili[idx_cat_p1]
             if hud["p1_health"]: hud["p1_health"].disegna(screen)
-            if hud["p1_inv"]:    hud["p1_inv"].disegna(screen)
             
-            if hud["p2_health"]: hud["p2_health"].disegna(screen)
-            if hud["p2_inv"]:    hud["p2_inv"].disegna(screen)
-
+            pygame.draw.rect(screen, (60, 60, 60), rect_btn_p1, border_radius=5)
+            draw_text_centered("INV", rect_btn_p1, (255, 215, 0), pygame.font.SysFont("Arial", 10, bold=True))
+            
+            if inv_p1_aperto and hud["p1_inv"]:
+                hud["p1_inv"].x, hud["p1_inv"].y = 230, 55 
+                hud["p1_inv"].disegna(screen, cat_p1)
+            
+            # --- PLAYER 2 (Ancorato a destra usando LARGHEZZA) ---
+            cat_p2 = categorie_disponibili[idx_cat_p2]
+            if hud["p2_health"]: 
+                # Aggiorna posizione barra se necessario
+                hud["p2_health"].rect.x = LARGHEZZA - 220
+                hud["p2_health"].disegna(screen)
+            
+            pygame.draw.rect(screen, (60, 60, 60), rect_btn_p2, border_radius=5)
+            draw_text_centered("INV", rect_btn_p2, (255, 215, 0), pygame.font.SysFont("Arial", 10, bold=True))
+            
+            if inv_p2_aperto and hud["p2_inv"]:
+                # Calcolo X dinamico per l'inventario P2
+                hud["p2_inv"].x = LARGHEZZA - 265
+                hud["p2_inv"].y = 55
+                hud["p2_inv"].disegna(screen, cat_p2)
     pygame.display.flip()
     clock.tick(60)
 
