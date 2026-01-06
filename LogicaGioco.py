@@ -6,7 +6,7 @@ import os
 from collections.abc import Iterable, Iterator
 
 # ==========================================
-# 1. INTERFACCE OBSERVER
+# INTERFACCE OBSERVER
 # ==========================================
 
 class Observer(ABC):
@@ -31,14 +31,15 @@ class Subject(ABC):
             observer.update(self)
 
 # ==========================================
-# 2. INVENTORY + ITERATOR (Spostato in alto per Player)
+# INVENTORY + ITERATOR
 # ==========================================
 
 class Item:
-    def __init__(self, nome: str, tipo: str, valore: int):
+    def __init__(self, nome: str, tipo: str, valore: int, oggetto=None):
         self.nome = nome
-        self.tipo = tipo  # "Cura", "Attacco", "Utility"
+        self.tipo = tipo  # "Cura", "Attacco", "Armatura"
         self.valore = valore
+        self.oggetto = oggetto  # riferimento all'oggetto reale (arma, pozione, armatura)
 
     def __repr__(self):
         return f"{self.nome}"
@@ -56,8 +57,9 @@ class InventoryIterator(Iterator):
         except IndexError:
             raise StopIteration()
 
-class Inventory(Iterable):
+class Inventory(Iterable, Subject):
     def __init__(self):
+        super().__init__()
         self._items: List[Item] = []
 
     def add_item(self, item: Item):
@@ -74,7 +76,7 @@ class Inventory(Iterable):
         return ", ".join([item.nome for item in self._items])
 
 # ==========================================
-# 3. MEMENTO
+# MEMENTO
 # ==========================================
 
 class CharacterMemento:
@@ -93,17 +95,15 @@ class AutoSaveObserver(Observer):
         manager = GameManager.get_instance()
         if not manager.giocatori: return
         try:
-            # Crea la lista di stati da salvare
             stati = [p.save_state().get_state() for p in manager.giocatori]
-            # Scrittura fisica sul file
             with open("salvataggio_gioco.json", "w") as f:
                 json.dump(stati, f, indent=4)
-            print("Log: Salvataggio completato correttamente.") # Aggiungi questo per debug
+            print("Log: Salvataggio completato correttamente.")
         except Exception as e:
             print(f"Errore critico durante il salvataggio: {e}")
 
 # ==========================================
-# 4. PLAYER (Sincronizzato con Inventario)
+# PLAYER
 # ==========================================
 
 class Player(Subject, ABC):
@@ -114,6 +114,7 @@ class Player(Subject, ABC):
         self._max_hp = 100
         self._hp = 100
         self._inventario = Inventory()
+        self._armatura: Armatura | None = None  #riferimento all'armatura equipaggiata
 
     @property
     def moralita(self) -> int: return self._moralita
@@ -135,12 +136,23 @@ class Player(Subject, ABC):
     @property
     def max_hp(self) -> int: return self._max_hp
 
-    def take_damage(self, amount: int): self.hp -= amount
-    def heal(self, amount: int): self.hp += amount
+    def take_damage(self, amount: int):
+        if self._armatura:
+            amount = self._armatura.difendi(amount) # riduci danno se armatura è equipaggiata
+        self.hp -= int(amount)
 
-    # ---------- MEMENTO AGGIORNATO ----------
+    def heal(self, amount: int):
+        self.hp += amount
+
+    def equip_armatura(self, armatura: Armatura):
+        self._armatura = armatura
+
+    def add_item(self, item: Item):
+        self._inventario.add_item(item)  # aggiungi oggetto
+        self.notify()   
+
+    # ---------- MEMENTO  ----------
     def save_state(self) -> CharacterMemento:
-        # Salviamo i nomi degli oggetti come lista di stringhe
         nomi_item = [item.nome for item in self._inventario]
         return CharacterMemento({
             "type": self.__class__.__name__,
@@ -148,7 +160,7 @@ class Player(Subject, ABC):
             "moralita": self._moralita,
             "hp": self._hp,
             "max_hp": self._max_hp,
-            "inventario": nomi_item  # Salva gli item!
+            "inventario": nomi_item
         })
 
     def restore_state(self, memento: CharacterMemento) -> None:
@@ -157,20 +169,34 @@ class Player(Subject, ABC):
         self._moralita = state["moralita"]
         self._hp = state.get("hp", 100)
         self._max_hp = state.get("max_hp", 100)
-        
-        # RIPRISTINO INTELLIGENTE DELL'INVENTARIO
         self._inventario = Inventory()
-        nomi_caricati = state.get("inventario", [])
-        
-        for nome in nomi_caricati:
-            # Assegniamo la categoria corretta in base al nome dell'oggetto
-            tipo = "Utility" # Valore di default
-            if nome.lower() == "spada":
+        self._armatura = None
+
+        for nome in state.get("inventario", []):
+            oggetto_reale = None
+            valore = 0
+            tipo = "Utility"
+
+            # tenta di creare l'oggetto dalla classe globale con lo stesso nome
+            try:
+                oggetto_reale = globals()[nome]()  # es: "SpadaBase" → SpadaBase()
+            except KeyError:
+                oggetto_reale = None  # se non esiste la classe, rimane None
+
+            # dedurre tipo e valore in base alla classe
+            if isinstance(oggetto_reale, Arma):
                 tipo = "Attacco"
-            elif nome.lower() == "pozione":
+                valore = getattr(oggetto_reale, "danno", 0)
+            elif isinstance(oggetto_reale, Pozione):
                 tipo = "Cura"
-            
-            self._inventario.add_item(Item(nome, tipo, 20))
+                valore = getattr(oggetto_reale, "cura", 0)
+            elif isinstance(oggetto_reale, Armatura):
+                tipo = "Armatura"
+                self.equip_armatura(oggetto_reale)
+
+            # aggiungi l'oggetto all'inventario
+            self._inventario.add_item(Item(nome, tipo, valore, oggetto=oggetto_reale))
+
 
 class Player1(Player):
     def __repr__(self): return f"Player1({self.nome}, HP={self.hp})"
@@ -179,7 +205,7 @@ class Player2(Player):
     def __repr__(self): return f"Player2({self.nome}, HP={self.hp})"
 
 # ==========================================
-# 5. FACTORY METHOD
+# FACTORY METHOD PLAYER
 # ==========================================
 
 class CharacterCreator(ABC):
@@ -193,13 +219,12 @@ class Player1Creator(CharacterCreator):
 class Player2Creator(CharacterCreator):
     def factory_method(self, nome: str, moralita: int) -> Player2: return Player2(nome, moralita)
 
-
-# ==============================================================================
+# ==========================================
 # MOSTRI
-# ==============================================================================
+# ==========================================
 
 class Mostro(ABC):
-    def __init__( self, nome: str, hp: int, danno: int, furtivita: int, intelligenza: int):
+    def __init__(self, nome: str, hp: int, danno: int, furtivita: int, intelligenza: int):
         self.nome = nome
         self.hp = hp
         self.danno = danno
@@ -212,46 +237,30 @@ class Mostro(ABC):
     def take_damage(self, amount: int) -> None:
         self.hp -= amount
         if self.hp < 0: self.hp = 0
+        self.notify()
 
-    @abstractmethod
     def attacca(self, player) -> None:
-        pass
-# ---------- CONCRETE PRODUCTS ----------
+        player.take_damage(self.danno)
 
 class Goblin(Mostro):
     def __init__(self):
-        super().__init__( nome="Goblin", hp=40, danno=10, furtivita=8, intelligenza=4)
-
-    def attacca(self, player) -> None:
-        player.take_damage(self.danno)
+        super().__init__("Goblin", 40, 10, 8, 4)
 
 class Anubi(Mostro):
     def __init__(self):
-        super().__init__(nome="Anubi", hp=80, danno=15, furtivita=1, intelligenza=2)
-
-    def attacca(self, player) -> None:
-        player.take_damage(self.danno)
+        super().__init__("Anubi", 80, 15, 1, 2)
 
 class Chica(Mostro):
     def __init__(self):
-        super().__init__(nome="Chica",hp=100, danno=20, furtivita=8, intelligenza=4)
-
-    def attacca(self, player) -> None:
-        player.take_damage(self.danno)
+        super().__init__("Chica", 100, 20, 8, 4)
 
 class Yeti(Mostro):
     def __init__(self):
-        super().__init__(nome="Yeti delle Nevi", hp=140, danno=30, furtivita=7, intelligenza=5)
-
-    def attacca(self, player) -> None:
-        player.take_damage(self.danno)
+        super().__init__("Yeti delle Nevi", 140, 30, 7, 5)
 
 class SerpenteTreTeste(Mostro):
     def __init__(self):
-        super().__init__(nome="Serpente a Tre Teste", hp=200, danno=70, furtivita=10, intelligenza=10)
-
-    def attacca(self, player) -> None:
-        player.take_damage(self.danno)
+        super().__init__("Serpente a Tre Teste", 200, 70, 10, 10)
 
 # ---------- CREATOR ----------
 class MostroCreator(ABC):
@@ -284,9 +293,8 @@ class SerpenteTreTesteCreator(MostroCreator):
         return SerpenteTreTeste()
 
 # ==========================================
-# 7. GAMEMANAGER (SINGLETON)
+# GAMEMANAGER (SINGLETON)
 # ==========================================
-
 class GameManager:
     _instance = None
     def __init__(self):
@@ -306,7 +314,7 @@ class GameManager:
         print("Log: Dati di gioco resettati.")
 
 # ==========================================
-# 8. FACADE
+# FACADE
 # ==========================================
 
 class GameFacade:
@@ -314,12 +322,13 @@ class GameFacade:
         self.manager = manager
         self.auto_saver = auto_saver
 
-    def crea_personaggio_completo(self, creator: CharacterCreator, player_id: int, nome_inserito: str = "", scelta_fatta: str = None) -> Player:
+    def crea_personaggio_completo(self, creator: CharacterCreator, player_id: int, nome_inserito: str = "", scelta_fatta: str = None,factory: ItemFactory | None = None) -> Player:
         nome = valida_nome(nome_inserito, player_id)
         player = creator.create_character(nome, 0)
         self.manager.giocatori.append(player)
         if self.auto_saver: player.attach(self.auto_saver)
         assegna_moralita(player, scelta_fatta)
+
         return player
 
     def carica_da_disco(self) -> bool:
@@ -342,8 +351,109 @@ class GameFacade:
     def esiste_salvataggio(self) -> bool:
         return os.path.exists("salvataggio_gioco.json")
 
+
 # ==========================================
-# 9. FUNZIONI SUPPORTO
+# ABSTRACT FACTORY ITEM
+# ==========================================
+
+class Arma(ABC):
+    @abstractmethod
+    def attacca(self, mostro) -> int: pass
+
+class Pozione(ABC):
+    @abstractmethod
+    def usa(self, player): pass
+
+class Armatura(ABC):
+    @abstractmethod
+    def difendi(self, danno: int) -> int: pass
+
+# ---------- ARMI CONCRETE ----------
+class SpadaBase(Arma):
+    def __init__(self): self.danno = 5
+    def attacca(self, mostro) -> int:
+        mostro.take_damage(self.danno)
+        return self.danno
+
+class Mazza(Arma):
+    def __init__(self): self.danno = 7
+    def attacca(self, mostro) -> int:
+        mostro.take_damage(self.danno)
+        return self.danno
+
+class Lama(Arma):
+    def __init__(self): self.danno = 9
+    def attacca(self, mostro) -> int:
+        mostro.take_damage(self.danno)
+        return self.danno
+
+class HeavySniper(Arma):
+    def __init__(self): self.danno = 15
+    def attacca(self, mostro) -> int:
+        mostro.take_damage(self.danno)
+        return self.danno
+
+class Pugnale(Arma):
+    def __init__(self): self.danno = 6
+    def attacca(self, mostro) -> int:
+        mostro.take_damage(self.danno)
+        return self.danno
+
+# ---------- POZIONI ----------
+class PozioneCura(Pozione):
+    def __init__(self): self.cura = 15
+    def usa(self, player): player.heal(self.cura); return self.cura
+
+class KitPozioniFinale(Pozione):
+    def __init__(self): self.cura = 50
+    def usa(self, player): player.heal(self.cura); return self.cura
+
+# ---------- ARMATURE ----------
+class ArmaturaBase(Armatura):
+    def difendi(self, danno: int) -> int: return int(danno * 0.95)
+class ArmaturaElevata(Armatura):
+    def difendi(self, danno: int) -> int: return int(danno * 0.95)
+class ArmaturaPiuElevata(Armatura):
+    def difendi(self, danno: int) -> int: return int(danno * 0.95)
+
+# ---------- ABSTRACT FACTORY ----------
+class ItemFactory(ABC):
+    @abstractmethod
+    def create_arma(self) -> Arma: pass
+    @abstractmethod
+    def create_pozione(self): pass
+    @abstractmethod
+    def create_armatura(self): pass
+
+# ---------- FACTORY LIVELLI ----------
+class Livello1Item(ItemFactory):
+    def create_arma(self) -> Arma: return SpadaBase()
+    def create_pozione(self): return None
+    def create_armatura(self): return None
+
+class Livello2Item(ItemFactory):
+    def create_arma(self) -> Arma: return Mazza()
+    def create_pozione(self): return PozioneCura()
+    def create_armatura(self): return ArmaturaBase()
+
+class Livello3Item(ItemFactory):
+    def create_arma(self) -> Arma: return Lama()
+    def create_pozione(self): return PozioneCura()
+    def create_armatura(self): return ArmaturaBase()
+
+class Livello4Item(ItemFactory):
+    def create_arma(self) -> Arma: return HeavySniper()
+    def create_pozione(self): return PozioneCura()
+    def create_armatura(self): return ArmaturaPiuElevata()
+
+class Livello5Item(ItemFactory):
+    def create_arma(self) -> Arma: return Pugnale()
+    def create_pozione(self): return KitPozioniFinale()
+    def create_armatura(self): return ArmaturaElevata()
+
+
+# ==========================================
+# FUNZIONI SUPPORTO
 # ==========================================
 
 def valida_nome(nome: str, player_id: int) -> str:
