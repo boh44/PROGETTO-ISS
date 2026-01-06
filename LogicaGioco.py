@@ -87,9 +87,29 @@ class CharacterMemento:
         return self._state
 
 class AutoSaveObserver(Observer):
-    def update(self, subject: Subject) -> None:
-        if isinstance(subject, Player):
-            self._salva_giocatori_attivi()
+    def update(self, subject):
+        manager = GameManager.get_instance()
+        
+        # Creiamo una struttura dati completa
+        dati_da_salvare = {
+            "livello_corrente": manager.livello_corrente,
+            "vite_rimanenti": manager.vite_rimanenti,  # Questi sono i "Cuori" comuni
+            "giocatori": []
+        }
+        
+        # Estraiamo lo stato dettagliato di ogni giocatore (HP + Inventario)
+        for p in manager.giocatori:
+            # Il metodo save_state() del player deve includere hp e inventario
+            memento_data = p.save_state().get_state()
+            dati_da_salvare["giocatori"].append(memento_data)
+            
+        # Scrittura fisica su file
+        try:
+            with open("salvataggio_gioco.json", "w") as f:
+                json.dump(dati_da_salvare, f, indent=4)
+            print(f"Log: Salvataggio completato (Livello: {manager.livello_corrente}, Vite: {manager.vite_rimanenti})")
+        except Exception as e:
+            print(f"Errore durante il salvataggio: {e}")
 
     def _salva_giocatori_attivi(self):
         manager = GameManager.get_instance()
@@ -137,9 +157,28 @@ class Player(Subject, ABC):
     def max_hp(self) -> int: return self._max_hp
 
     def take_damage(self, amount: int):
-        if self._armatura:
-            amount = self._armatura.difendi(amount) # riduci danno se armatura è equipaggiata
-        self.hp -= int(amount)
+        # 1. Sottrai il danno
+        self.hp -= amount
+        print(f"Log: {self.nome} ha subito {amount} danni. HP: {self.hp}")
+
+        # 2. Controllo se gli HP sono finiti
+        if self.hp <= 0:
+            manager = GameManager.get_instance()
+            
+            if manager.vite_rimanenti > 0:
+                # TOGLIE UN CUORE
+                manager.vite_rimanenti -= 1 
+                
+                # RESETTA LA BARRA VERDE A 100 (o al massimo)
+                self.hp = self._max_hp 
+                print(f"Log: Vita persa! Vite rimaste: {manager.vite_rimanenti}. HP resettati.")
+            else:
+                # Se non ci sono più vite, resta a 0 per il Game Over
+                self.hp = 0
+                print("Log: Nessuna vita rimasta!")
+
+        # 3. NOTIFICA LA GUI (Questo fa muovere la barra e i cuori in tempo reale)
+        self.notify()
 
     def heal(self, amount: int):
         self.hp += amount
@@ -160,7 +199,7 @@ class Player(Subject, ABC):
             "moralita": self._moralita,
             "hp": self._hp,
             "max_hp": self._max_hp,
-            "inventario": nomi_item
+            "inventario": [item.nome for item in self._inventario],
         })
 
     def restore_state(self, memento: CharacterMemento) -> None:
@@ -224,12 +263,13 @@ class Player2Creator(CharacterCreator):
 # ==========================================
 
 class Mostro(ABC):
-    def __init__(self, nome: str, hp: int, danno: int, furtivita: int, intelligenza: int):
+    def __init__( self, nome: str, hp: int, danno: int, furtivita: int, intelligenza: int,x=0,y=0):
         self.nome = nome
         self.hp = hp
         self.danno = danno
         self.furtivita = furtivita
         self.intelligenza = intelligenza
+        self.pos = [x, y]
 
     def is_alive(self) -> bool:
         return self.hp > 0
@@ -237,30 +277,48 @@ class Mostro(ABC):
     def take_damage(self, amount: int) -> None:
         self.hp -= amount
         if self.hp < 0: self.hp = 0
-        self.notify()
+
+    @abstractmethod
+    def attacca(self, player) -> None:
+        pass
+# ---------- CONCRETE PRODUCTS ----------
+
+class Goblin(Mostro):
+    def __init__(self, x=0, y=0):
+        super().__init__(nome="Goblin", hp=40, danno=10, furtivita=8, intelligenza=4,x=x,y=y)
+        self.pos = [x, y] # Ci serve per sapere dove disegnarlo nella GUI
 
     def attacca(self, player) -> None:
         player.take_damage(self.danno)
 
-class Goblin(Mostro):
-    def __init__(self):
-        super().__init__("Goblin", 40, 10, 8, 4)
-
 class Anubi(Mostro):
-    def __init__(self):
-        super().__init__("Anubi", 80, 15, 1, 2)
+    def __init__(self,x=0,y=0):
+        super().__init__(nome="Anubi", hp=80, danno=15, furtivita=1, intelligenza=2,x=x,y=y)
+        self.pos = [x, y] 
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
 
 class Chica(Mostro):
-    def __init__(self):
-        super().__init__("Chica", 100, 20, 8, 4)
+    def __init__(self,x=0,y=0):
+        super().__init__(nome="Chica",hp=100, danno=20, furtivita=8, intelligenza=4,x=x,y=y)
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
 
 class Yeti(Mostro):
-    def __init__(self):
-        super().__init__("Yeti delle Nevi", 140, 30, 7, 5)
+    def __init__(self,x=0,y=0):
+        super().__init__(nome="Yeti delle Nevi", hp=140, danno=30, furtivita=7, intelligenza=5,x=x,y=y)
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
 
 class SerpenteTreTeste(Mostro):
-    def __init__(self):
-        super().__init__("Serpente a Tre Teste", 200, 70, 10, 10)
+    def __init__(self,x=0,y=0):
+        super().__init__(nome="Serpente a Tre Teste", hp=200, danno=70, furtivita=10, intelligenza=10,x=x,y=y)
+
+    def attacca(self, player) -> None:
+        player.take_damage(self.danno)
 
 # ---------- CREATOR ----------
 class MostroCreator(ABC):
@@ -291,7 +349,7 @@ class YetiCreator(MostroCreator):
 class SerpenteTreTesteCreator(MostroCreator):
     def factory_method(self) -> Mostro:
         return SerpenteTreTeste()
-
+    
 # ==========================================
 # GAMEMANAGER (SINGLETON)
 # ==========================================
@@ -322,7 +380,9 @@ class GameFacade:
         self.manager = manager
         self.auto_saver = auto_saver
 
-    def crea_personaggio_completo(self, creator: CharacterCreator, player_id: int, nome_inserito: str = "", scelta_fatta: str = None,factory: ItemFactory | None = None) -> Player:
+    def crea_personaggio_completo(self, creator: CharacterCreator, player_id: int,
+                                   nome_inserito: str = "", scelta_fatta: str = None,
+                                   factory: ItemFactory | None = None) -> Player:
         nome = valida_nome(nome_inserito, player_id)
         player = creator.create_character(nome, 0)
         self.manager.giocatori.append(player)
@@ -332,22 +392,49 @@ class GameFacade:
         return player
 
     def carica_da_disco(self) -> bool:
-        if not os.path.exists("salvataggio_gioco.json"): return False
+        if not os.path.exists("salvataggio_gioco.json"): 
+            return False
         try:
             with open("salvataggio_gioco.json", "r") as f:
-                dati = json.load(f)
-            self.manager.giocatori.clear()
-            for d in dati:
-                p = Player2(d["nome"], d["moralita"]) if d.get("type") == "Player2" else Player1(d["nome"], d["moralita"])
-                p.restore_state(CharacterMemento(d))
-                self.manager.giocatori.append(p)
-                if self.auto_saver: p.attach(self.auto_saver)
-                print(f"Log: Ripristinato {p.nome} (Moralità: {p.moralita}, HP: {p.hp}), Item: {p._inventario}")
-            return True
-        except Exception as e:
-            print(f"Errore: {e}")
-            return False
+                contenuto = json.load(f)
+            
+            # 1. GESTIONE DATI GLOBALI (Livello e Cuori/Vite)
+            if isinstance(contenuto, dict):
+                # Carica il livello
+                self.manager.livello_corrente = contenuto.get("livello_corrente", 1)
+                # Carica i cuori (vite rimanenti del team)
+                self.manager.vite_rimanenti = contenuto.get("vite_rimanenti", 3)
+                lista_giocatori = contenuto.get("giocatori", [])
+            else:
+                # Fallback per vecchi salvataggi senza struttura a dizionario
+                lista_giocatori = contenuto 
+                self.manager.livello_corrente = 1
+                self.manager.vite_rimanenti = 3
 
+            # 2. RIPRISTINO GIOCATORI (HP e Inventario)
+            self.manager.giocatori.clear()
+            for d in lista_giocatori:
+                # Identifica il tipo di player
+                if d.get("type") == "Player2":
+                    p = Player2(d["nome"], d["moralita"])
+                else:
+                    p = Player1(d["nome"], d["moralita"])
+                
+                # restore_state caricherà HP e Inventario se CharacterMemento li gestisce
+                p.restore_state(CharacterMemento(d))
+                
+                # Aggiunge il player al manager e riattacca l'auto_saver
+                self.manager.giocatori.append(p)
+                if self.auto_saver: 
+                    p.attach(self.auto_saver)
+            
+            print(f"Log: Caricato Livello {self.manager.livello_corrente}, Vite: {self.manager.vite_rimanenti}")
+            return True
+
+        except Exception as e:
+            print(f"Errore caricamento: {e}")
+            return False
+        
     def esiste_salvataggio(self) -> bool:
         return os.path.exists("salvataggio_gioco.json")
 
