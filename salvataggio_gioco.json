@@ -1,0 +1,22 @@
+[
+    {
+        "type": "Player1",
+        "nome": "giu",
+        "moralita": 3,
+        "hp": 100,
+        "max_hp": 100,
+        "inventario": [
+            "Spada"
+        ]
+    },
+    {
+        "type": "Player2",
+        "nome": "a",
+        "moralita": 3,
+        "hp": 100,
+        "max_hp": 100,
+        "inventario": [
+            "Spada"
+        ]
+    }
+]
