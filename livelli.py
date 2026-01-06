@@ -1,16 +1,19 @@
 import pygame
+import os
+import sys
 
 class GestoreLivelli:
     def __init__(self, larghezza, altezza):
         # Percorsi delle tue immagini sequenziali
         self.percorsi = [
-            'livello_1.jpeg',
-            'livello_2.jpeg',
-            'livello_3.jpeg',
-            'livello_4.jpeg',
-            'livello_5.jpeg'
+            'sfondo_livello1.jpeg',
+            'sfondo_livello2.jpg',
+            'sfondo_livello3.jpeg',
+            'sfondo_livello4.jpeg',
+            'sfondo_livello5.jpeg'
         ]
-        
+
+
         # Carichiamo i "Master" (originali)
         self.master_images = []
         for p in self.percorsi:
@@ -33,8 +36,14 @@ class GestoreLivelli:
         """Richiamata quando la finestra cambia dimensione"""
         self.sfondi_scalati = [pygame.transform.scale(img, (L, A)) for img in self.master_images]
 
-    def get_livello_attuale(self):
-        return self.sfondi_scalati[self.indice_corrente]
+    # In livelli.py
+
+    def get_livello_attuale(self): # Rimuovi 'sfondi_dict' da qui!
+        # Usiamo la lista interna della classe (quella generata dai percorsi)
+        if 0 <= self.indice_corrente < len(self.sfondi_scalati):
+            return self.sfondi_scalati[self.indice_corrente]
+        else:
+            return self.sfondi_scalati[-1] # Fallback sull'ultimo se l'indice è fuori
 
     def prossimo_livello(self):
         if self.indice_corrente < len(self.sfondi_scalati) - 1:
