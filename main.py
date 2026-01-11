@@ -14,8 +14,11 @@ alpha_fade = 0  # Gestisce la trasparenza del velo nero
 fase_transizione = None # Può essere "IN" o "OUT"
 colore_transizione = (0, 0, 0) # Default nero
 
+# Dizionario per tenere i valori precedenti (opzionale)
+player_stats_cache = {}
+
 def disegna_pannello_stats(surface, player, x, y):
-    # Sfondo leggermente più grande per ospitare il nome
+    
     sfondo = pygame.Surface((150, 110), pygame.SRCALPHA)
     sfondo.fill((0, 0, 0, 180)) # Nero più opaco per leggere meglio
     pygame.draw.rect(sfondo, (255, 255, 255), sfondo.get_rect(), width=1, border_radius=5)
@@ -30,17 +33,18 @@ def disegna_pannello_stats(surface, player, x, y):
     
     # Linea divisoria
     pygame.draw.line(surface, (100, 100, 100), (x + 10, y + 28), (x + 140, y + 28))
-
+    
     stats = [
-        (f"Moralità: {player.moralita}", (255, 215, 0)),
-        (f"Danno: {getattr(player, 'danno', 10)}", (255, 80, 80)),
-        (f"Furtività: {getattr(player, 'furtivita', 5)}", (100, 200, 255)),
-        (f"Intelligenza: {getattr(player, 'intelligenza', 5)}", (150, 255, 150))
+        (f"Moralità: {player.moralita}/10", (255, 215, 0)),
+        (f"Danno: {player.danno}/10", (255, 80, 80)),
+        (f"Furtività: {player.furtivita}/10", (100, 200, 255)),
+        (f"Intelligenza: {player.intelligenza}/10", (150, 255, 150))
     ]
 
     for i, (testo, colore) in enumerate(stats):
         txt_surf = font_s.render(testo, True, colore)
         surface.blit(txt_surf, (x + 10, y + 35 + (i * 18)))
+
 
 # --- 1. CLASSI UTILITY (UI) ---
 class ToggleSelector:
@@ -135,13 +139,39 @@ class InventoryUI:
             
             current_x += self.slot_size + self.padding
     
-    '''@staticmethod
+    @staticmethod
     def aggiorna_inventario(player, arma=None, pozione=None, armatura=None):
-        if player._inventario: player._inventario.clear()
-        if arma: player.add_item(Item(nome=arma.__class__.__name__, tipo="Attacco", valore=getattr(arma, "danno", 0), oggetto=arma))
-        if pozione: player.add_item(Item(nome=pozione.__class__.__name__, tipo="Cura", valore=getattr(pozione, "cura", 0), oggetto=pozione))
-        if armatura: player.add_item(Item(nome=armatura.__class__.__name__, tipo="Armatura", valore=0, oggetto=armatura))
-        print(f"Log Inventario: {player.nome} ha ora {len(player._inventario)} oggetti: {arma}, {pozione}, {armatura}.")'''
+        # 1. Svuota il vecchio equipaggiamento
+        player._inventario._items.clear() 
+        
+        # 2. Lista degli oggetti da processare
+        oggetti = [
+            (arma, "Attacco"), 
+            (pozione, "Cura"), 
+            (armatura, "Utility")  # <--- MODIFICATO DA "Armatura" A "Utility"
+        ]
+        
+        # ... resto del ciclo for rimane identico ...
+        for obj, tipo_default in oggetti:
+            if obj is not None:
+                if isinstance(obj, Item):
+                    player.add_item(obj)
+                else:
+                    nome_classe = obj.__class__.__name__
+                    valore = 0
+                    if hasattr(obj, "danno"): valore = obj.danno
+                    elif hasattr(obj, "cura"): valore = obj.cura
+                    
+                    # Ora tipo_default sarà "Utility" per l'armatura
+                    nuovo_item = Item(
+                        nome=nome_classe, 
+                        tipo=tipo_default, 
+                        valore=valore, 
+                        oggetto=obj
+                    )
+                    player.add_item(nuovo_item)
+        
+        player.notify()
 
 class HealthBar(Observer):
     def __init__(self, x, y, w, h, player, mostra_vite=True, is_boss=False):
@@ -188,7 +218,7 @@ class HealthBar(Observer):
             start_x = self.rect.x + 2
             start_y = self.rect.y - 12 # Posizionati sopra la barra
 
-            for i in range(5):
+            for i in range(6):
                 pos_x = start_x + (i * spazio)
                 attivo = i < vite_attuali
                 col = colore_cuore if attivo else (60, 60, 60)
@@ -254,7 +284,15 @@ class AnimatedSprite:
         self.index = 0
         self.animation_speed = 0.15
         self.pos = [x, y]
-
+    def rescale(self, scale):
+        """Aggiorna solo la scala dei frame senza resettare l'animazione."""
+        self.scale = scale
+        # Scaliamo ogni frame a partire dai frame originali
+        for i, frame in enumerate(self.frames_original):
+            self.frames[i] = pygame.transform.scale(
+                frame,
+                (int(frame.get_width() * scale), int(frame.get_height() * scale))
+            )
     def disegna(self, surface, con_ombra=False):
         self.index += self.animation_speed
         if self.index >= len(self.frames):

@@ -158,8 +158,35 @@ class Player(Subject, ABC):
     @moralita.setter
     def moralita(self, valore: int):
         if valore != self._moralita:
-            self._moralita = valore
+            self._moralita = max(0, min(valore,10))
             self.notify()
+    
+    # --- DANNO ---
+    @property
+    def danno(self) -> int: return self.abilita["danno"]
+
+    @danno.setter
+    def danno(self, valore: int):
+        self.abilita["danno"] = max(0, min(valore, 10))
+        self.notify()
+
+    # --- FURTIVITÀ ---
+    @property
+    def furtivita(self) -> int: return self.abilita["furtivita"]
+
+    @furtivita.setter
+    def furtivita(self, valore: int):
+        self.abilita["furtivita"] = max(0, min(valore, 10))
+        self.notify()
+
+    # --- INTELLIGENZA ---
+    @property
+    def intelligenza(self) -> int: return self.abilita["intelligenza"]
+
+    @intelligenza.setter
+    def intelligenza(self, valore: int):
+        self.abilita["intelligenza"] = max(0, min(valore, 10))
+        self.notify()
 
     @property
     def hp(self) -> int: return self._hp
@@ -220,7 +247,7 @@ class Player(Subject, ABC):
             return False
         diff = abs(self.abilita["furtivita"] - mostro.furtivita)
         if diff <= 3:
-            self.abilita["furtivita"] += 1
+            self.abilita["furtivita"] += 2
             self.notify()
             print(f"{self.nome} tenta di fuggire: RIUSCITA! Furtività aumentata a {self.abilita['furtivita']}")
             return True
@@ -250,6 +277,7 @@ class Player(Subject, ABC):
             "moralita": self._moralita,
             "hp": self._hp,
             "max_hp": self._max_hp,
+            "abilita": self.abilita.copy(),
             "inventario": [item.nome for item in self._inventario],
         })
 
@@ -261,7 +289,9 @@ class Player(Subject, ABC):
         self._max_hp = state.get("max_hp", 100)
         self._inventario = Inventory()
         self._armatura = None
-
+        if "abilita" in state:
+            self.abilita = state["abilita"]
+            
         for nome in state.get("inventario", []):
             oggetto_reale = None
             valore = 0
@@ -281,7 +311,7 @@ class Player(Subject, ABC):
                 tipo = "Cura"
                 valore = getattr(oggetto_reale, "cura", 0)
             elif isinstance(oggetto_reale, Armatura):
-                tipo = "Armatura"
+                tipo = "Utility"
                 self.equip_armatura(oggetto_reale)
 
             # aggiungi l'oggetto all'inventario
@@ -374,7 +404,7 @@ class Mostro(Subject, ABC):
         self.furtivita = state["furtivita"]
         self.intelligenza = state["intelligenza"]
         self.pos = state["pos"]
-        self.notify()
+
 
 
 # ---------- CONCRETE PRODUCTS ----------
@@ -478,9 +508,10 @@ class GameManager:
 
     def resetGameData(self):
         self.livello_corrente = 1
-        self.vite_rimanenti = 5
+        self.vite_rimanenti = 6
         self.giocatori: List[Player] = []
         self.boss_attuale = None
+        self.npc_attuale: NPC | None = None
         print("Log: Dati di gioco resettati.")
 
 # ==========================================
@@ -514,7 +545,7 @@ class GameFacade:
             # 1. DATI GLOBALI
             if isinstance(contenuto, dict):
                 self.manager.livello_corrente = contenuto.get("livello_corrente", 1)
-                self.manager.vite_rimanenti = contenuto.get("vite_rimanenti", 5)
+                self.manager.vite_rimanenti = contenuto.get("vite_rimanenti", 6)
                 lista_giocatori = contenuto.get("giocatori", [])
                 # Usiamo la chiave "mostri" come hai specificato tu
                 dati_salvatore_mostro = contenuto.get("mostri") 
@@ -522,7 +553,7 @@ class GameFacade:
                 # Gestione vecchio formato (solo lista giocatori)
                 lista_giocatori = contenuto
                 self.manager.livello_corrente = 1
-                self.manager.vite_rimanenti = 5
+                self.manager.vite_rimanenti = 6
                 dati_salvatore_mostro = None
 
             # 2. RIPRISTINO GIOCATORI
@@ -588,31 +619,31 @@ class Armatura(ABC):
 
 # ---------- ARMI CONCRETE ----------
 class SpadaBase(Arma):
-    def __init__(self): self.danno = 5
+    def __init__(self): self.danno = 6
     def attacca(self, mostro) -> int:
         mostro.take_damage(self.danno)
         return self.danno
 
 class Mazza(Arma):
-    def __init__(self): self.danno = 7
+    def __init__(self): self.danno = 8
     def attacca(self, mostro) -> int:
         mostro.take_damage(self.danno)
         return self.danno
 
 class Lama(Arma):
-    def __init__(self): self.danno = 9
+    def __init__(self): self.danno = 10
     def attacca(self, mostro) -> int:
         mostro.take_damage(self.danno)
         return self.danno
 
 class HeavySniper(Arma):
-    def __init__(self): self.danno = 15
+    def __init__(self): self.danno = 18
     def attacca(self, mostro) -> int:
         mostro.take_damage(self.danno)
         return self.danno
 
 class Pugnale(Arma):
-    def __init__(self): self.danno = 6
+    def __init__(self): self.danno = 23
     def attacca(self, mostro) -> int:
         mostro.take_damage(self.danno)
         return self.danno
@@ -630,9 +661,9 @@ class KitPozioniFinale(Pozione):
 class ArmaturaBase(Armatura):
     def difendi(self, danno: int) -> int: return int(danno * 0.95)
 class ArmaturaElevata(Armatura):
-    def difendi(self, danno: int) -> int: return int(danno * 0.95)
+    def difendi(self, danno: int) -> int: return int(danno * 0.08)
 class ArmaturaPiuElevata(Armatura):
-    def difendi(self, danno: int) -> int: return int(danno * 0.95)
+    def difendi(self, danno: int) -> int: return int(danno * 0.07)
 
 # ---------- ABSTRACT FACTORY ----------
 class ItemFactory(ABC):
@@ -680,5 +711,73 @@ def valida_nome(nome: str, player_id: int) -> str:
 
 def assegna_moralita(player: Player, scelta: str = None):
     scelta = scelta or "anima indifferente"
-    bonus = {"eroe altruista": 8, "mercenario egoista": 3, "anima indifferente": 5}
-    player.moralita += bonus.get(scelta, 5)
+    
+    # Definiamo i valori sulla scala 1-10
+    configurazioni = {
+        "eroe altruista":    {"mor": 8, "dan": 2, "fur": 1, "int": 1},
+        "mercenario egoista": {"mor": 2, "dan": 2, "fur": 1, "int": 1},
+        "anima indifferente": {"mor": 5, "dan": 2, "fur": 1, "int": 1}
+    }
+
+    stats = configurazioni.get(scelta, configurazioni["anima indifferente"])
+
+    player.moralita = stats["mor"]
+    player.danno = stats["dan"]
+    player.furtivita = stats["fur"]
+    player.intelligenza = stats["int"]
+    
+    print(f"Log: Statistiche assegnate per {scelta}: Danno {player.danno}") # Debug
+
+# ==========================================
+# NPC SYSTEM
+# ==========================================
+
+class SceltaDialogo:
+    """Rappresenta una singola opzione di risposta."""
+    def __init__(self, testo: str, effetto: Dict[str, int]):
+        self.testo = testo
+        self.effetto = effetto # Es: {"moralita": +1, "intelligenza": -1}
+
+class NPC(ABC):
+    def __init__(self, nome: str, domanda: str, opzioni: List[SceltaDialogo]):
+        self.nome = nome
+        self.domanda = domanda
+        self.opzioni = opzioni
+
+    def parla(self):
+        return self.domanda
+
+    def interagisci(self, player: Player, indice_scelta: int):
+        if 0 <= indice_scelta < len(self.opzioni):
+            scelta = self.opzioni[indice_scelta]
+            print(f"Log: {player.nome} ha scelto: {scelta.testo}")
+            
+            # Applichiamo gli effetti dinamicamente
+            for stat, valore in scelta.effetto.items():
+                valore_attuale = getattr(player, stat, 0)
+                setattr(player, stat, valore_attuale + valore)
+            
+            player.notify() # Notifica la GUI del cambiamento statistiche
+            return True
+        return False
+
+# ---------- NPC CONCRETI ----------
+
+class VecchioSaggio(NPC):
+    def __init__(self):
+        opzioni = [
+            SceltaDialogo("Condivido il mio pane con te.", {"moralita": 2, "intelligenza": 1}),
+            SceltaDialogo("Non ho tempo per i mendicanti.", {"moralita": -2, "danno": 1}),
+            SceltaDialogo("Cosa ottengo in cambio?", {"moralita": 0, "furtivita": 1})
+        ]
+        super().__init__("VecchioSaggio", "Viandante, hai qualcosa da offrire a chi non ha nulla?", opzioni)
+
+class GuardiaCorrotta(NPC):
+    def __init__(self):
+        opzioni = [
+            SceltaDialogo("Ti sfido a duello!", {"danno": 2, "moralita": 1}),
+            SceltaDialogo("(Prova a corromperlo con l'oro)", {"moralita": -1, "furtivita": 2}),
+            SceltaDialogo("Cerco un modo per passare pacificamente.", {"intelligenza": 2})
+        ]
+        super().__init__("GuardiaOscura", "Nessuno passa senza pagare il pedaggio...o il prezzo del sangue.", opzioni)
+
