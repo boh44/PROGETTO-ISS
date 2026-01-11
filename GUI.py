@@ -218,33 +218,43 @@ while running:
                     stato_gioco, indice_lettura = "INTRODUZIONE", 0
                     
                 # -- CARICA PARTITA --
+                # -- CARICA PARTITA --
                 elif btn_carica.collidepoint(pos_mouse):
                     if facade.carica_da_disco():
                         # 1. Recupera l'indice corretto dal manager caricato
                         indice_caricato = max(0, manager_gioco.livello_corrente - 1)
                         gestore_livelli.indice_corrente = indice_caricato
+                        
                         # 2. Riattacca gli osservatori ai player ripristinati
                         for p in manager_gioco.giocatori:
                             p.attach(facade.auto_saver)
+                            
                         # 3. Rigenera la GRAFICA (Posizioni e Scale)
                         nuovo_p1, nuovo_p2, nuovo_visual = aggiorna_posizioni_e_scale(LARGHEZZA, ALTEZZA, gestore_livelli.indice_corrente)
                         personaggio1, personaggio2 = nuovo_p1, nuovo_p2
                         boss_visual = nuovo_visual
-    
-                        # 4. SINCRONIZZAZIONE LOGICA/GRAFICA BOSS
-                        if manager_gioco.boss_attuale:  #Se il manager ha già caricato il boss dal disco, lo usiamo
-                            manager_gioco.boss_attuale.pos = [boss_visual.pos[0], boss_visual.pos[1]]   ## Aggiorniamo la sua posizione logica affinché la barra vita lo segua
-                            boss = manager_gioco.boss_attuale
-                            print(f"Caricato Boss: {manager_gioco.boss_attuale.nome} con HP: {manager_gioco.boss_attuale.hp}")
+                        
+                        # 4. CONTROLLO STATO NPC (MEMENTO)
+                        if getattr(manager_gioco, "npc_in_corso", False):
+                            stato_gioco = "DIALOGO_NPC"
+                            idx = gestore_livelli.indice_corrente
+                            # Se l'indice è 3 (dopo Chica), carica il Saggio. Se è 4 (dopo Yeti), la Guardia.
+                            npc_attivo = lista_npc[0] if idx == 3 else lista_npc[1]
+                            print(f"Log: Ripristinato dialogo con {npc_attivo.nome}")
                         else:
-                            print("ERRORE GRAVE: boss_attuale mancante dopo il load")
-
-                        # 5.Sincronizza l'HUD
+                            # Se non c'è un dialogo, decidiamo se andare in Gameplay o Mappa
+                            stato_gioco = "GAMEPLAY" 
+                            indice_testo_label = 0
+                        
+                        # 5. SINCRONIZZAZIONE LOGICA/GRAFICA BOSS
+                        if manager_gioco.boss_attuale:
+                            manager_gioco.boss_attuale.pos = [boss_visual.pos[0], boss_visual.pos[1]]
+                            manager_gioco.boss_attuale.attach(facade.auto_saver) # Riattacca observer al boss
+                            print(f"Caricato Boss: {manager_gioco.boss_attuale.nome} con HP: {manager_gioco.boss_attuale.hp}")
+                        
+                        # 6. Sincronizza l'HUD finale
                         sincronizza_hud()
-                        # 6. Avvia il gioco
-                        stato_gioco = "GAMEPLAY"
-                        #mostra_label_livello = True    #levato per evitare che appaia di nuovo il banner
-                        indice_testo_label = 0
+                        
                     else: 
                         print("Errore: Nessun salvataggio trovato.")
 
@@ -324,6 +334,12 @@ while running:
                         for p in manager_gioco.giocatori:
                             npc_attivo.interagisci(p, i)
 
+                        # --- AGGIUNTA PER MEMENTO ---
+                        manager_gioco.npc_in_corso = False # Dialogo terminato
+                        manager_gioco.giocatori[0].notify() 
+
+                        # Sostituisci facade.salva_su_disco() con questa riga:
+                        facade.auto_saver.update(manager_gioco)
                         # Torna alla mappa mondi
                         stato_gioco = "MAPPA_MONDI"
                         fase_transizione = "FINE"
@@ -644,9 +660,18 @@ while running:
                     stato_gioco = "MAPPA_MONDI"
                 # Se abbiamo finito il Livello 3 (Chica - indice 2) o Livello 4 (Yeti - indice 3)
                 elif livello_appena_finito in [2, 3]:
-                    # Assegna l'NPC corretto
                     npc_attivo = lista_npc[0] if livello_appena_finito == 2 else lista_npc[1]
+                    
+                    # 1. SETTA LA VARIABILE NEL MANAGER
+                    manager_gioco.npc_in_corso = True 
+                    
+                    # 2. CAMBIA LO STATO
                     stato_gioco = "DIALOGO_NPC"
+                    
+                    # 3. NOTIFICA (Questo è il momento in cui l'Observer scrive il JSON)
+                    if manager_gioco.giocatori:
+                        manager_gioco.giocatori[0].notify() 
+                    print("DEBUG: Salvataggio forzato con npc_in_corso = True")
                 else:
                     # Fallback per sicurezza
                     stato_gioco = "MAPPA_MONDI"

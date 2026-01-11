@@ -105,6 +105,7 @@ class AutoSaveObserver(Observer):
         dati_da_salvare = {
             "livello_corrente": manager.livello_corrente,
             "vite_rimanenti": manager.vite_rimanenti,
+            "npc_in_corso": manager.npc_in_corso,
             "giocatori": [],
             "mostri": None  # Cambiato da [] a None perché abbiamo un solo boss attivo
         }
@@ -512,6 +513,7 @@ class GameManager:
         self.giocatori: List[Player] = []
         self.boss_attuale = None
         self.npc_attuale: NPC | None = None
+        self.npc_in_corso = False
         print("Log: Dati di gioco resettati.")
 
 # ==========================================
@@ -546,6 +548,7 @@ class GameFacade:
             if isinstance(contenuto, dict):
                 self.manager.livello_corrente = contenuto.get("livello_corrente", 1)
                 self.manager.vite_rimanenti = contenuto.get("vite_rimanenti", 6)
+                self.manager.npc_in_corso = contenuto.get("npc_in_corso", False)
                 lista_giocatori = contenuto.get("giocatori", [])
                 # Usiamo la chiave "mostri" come hai specificato tu
                 dati_salvatore_mostro = contenuto.get("mostri") 

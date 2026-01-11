@@ -1,22 +1,54 @@
-[
-    {
-        "type": "Player1",
-        "nome": "giu",
-        "moralita": 3,
-        "hp": 100,
-        "max_hp": 100,
-        "inventario": [
-            "Spada"
-        ]
-    },
-    {
-        "type": "Player2",
-        "nome": "a",
-        "moralita": 3,
-        "hp": 100,
-        "max_hp": 100,
-        "inventario": [
-            "Spada"
+{
+    "livello_corrente": 4,
+    "vite_rimanenti": 6,
+    "npc_in_corso": true,
+    "giocatori": [
+        {
+            "type": "Player1",
+            "nome": "giu",
+            "moralita": 3,
+            "hp": 90,
+            "max_hp": 100,
+            "abilita": {
+                "danno": 0,
+                "furtivita": 0,
+                "intelligenza": 0
+            },
+            "inventario": [
+                "HeavySniper",
+                "PozioneCura",
+                "ArmaturaPiuElevata"
+            ]
+        },
+        {
+            "type": "Player2",
+            "nome": "a",
+            "moralita": 3,
+            "hp": 90,
+            "max_hp": 100,
+            "abilita": {
+                "danno": 0,
+                "furtivita": 0,
+                "intelligenza": 0
+            },
+            "inventario": [
+                "HeavySniper",
+                "PozioneCura",
+                "ArmaturaPiuElevata"
+            ]
+        }
+    ],
+    "mostri": {
+        "type": "Yeti",
+        "nome": "Yeti delle Nevi",
+        "hp": 140,
+        "max_hp": 140,
+        "danno": 30,
+        "furtivita": 7,
+        "intelligenza": 5,
+        "pos": [
+            190,
+            90
         ]
     }
-]
+}
