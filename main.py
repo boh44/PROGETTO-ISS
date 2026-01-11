@@ -632,22 +632,13 @@ livello0_frasi = [
     ["_Inserite i vostri nomi_"]
 ]
 
-# Testi introduttivi per ogni livello
-intro_livelli = {
-    0: ["Benvenuto nel Livello 1!", "Fai attenzione ai nemici che incontrerai..."],
-    1: ["Livello 2: Il bosco oscuro", "Troverai mostri più forti qui."],
-    2: ["Livello 3: La montagna gelida", "Prepara la tua strategia!"],
-    3: ["Livello 4: La caverna infuocata", "Solo i più coraggiosi sopravvivranno."],
-    4: ["Livello 5: Il castello maledetto", "Il boss finale ti attende."]
-}
-
-# --- 2. TESTI LIVELLI ---
+# --- TESTI LIVELLI ---
 testi_livello = {
-    0: ["Benvenuto nel livello 1!", "Preparati ad affrontare il Goblin."],
-    1: ["Livello 2: L'Anubi ti osserva...", "Fai attenzione alle trappole!"],
-    2: ["Livello 3: Chica appare davanti a te.", "Non sottovalutarla."],
-    3: ["Livello 4: Lo Yeti ti sfida con la sua forza!", "Coraggio!"],
-    4: ["Livello 5: Il Serpente a tre teste emerge dal buio.", "Sconfiggilo!"]
+    0: ["Benvenuti, avventurieri!", "Il primo mostro vi attende, preparatevi!"],
+    1: ["Anubi veglia dall’ombra...", "Camminate con cautela tra le trappole!"],
+    2: ["Una creatura misteriosa si palesa.", "Si fa chiamare Chica.", "Non sottovalutatela!"],
+    3: ["Lo Yeti vi sfida con forza bestiale!", "Coraggio, non arretrate!"],
+    4: ["Siete giunti all'ultimo livello.", "Il gioco si ricorda delle vostre scelte ed esse avranno un impatto.", "Preparatevi all’ultima sfida!"]
 }
 
 # --- 3. FUNZIONE PER DISEGNARE LA LABEL DEL LIVELLO ---
