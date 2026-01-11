@@ -3,18 +3,17 @@ import pygame
 import sys
 import os
 from LogicaGioco import *
-from livelli import GestoreLivelli
 from main import *
 import random
 
-# 1. Otteniamo lo sprite grafico
+#Otteniamo lo sprite grafico
 personaggio1, personaggio2, sprite_temp = aggiorna_posizioni_e_scale(LARGHEZZA, ALTEZZA)
 
-# CREA IL BOSS SOLO SE NON ESISTE (nuova partita)
+#CREA IL BOSS SOLO SE NON ESISTE (nuova partita)
 if manager_gioco.boss_attuale is None:
     boss_logico = Goblin(x=sprite_temp.pos[0] + 60, y=sprite_temp.pos[1])
     manager_gioco.boss_attuale = boss_logico
-    boss_logico.attach(facade.auto_saver) 
+    boss_logico.attach(facade.auto_saver)
     sincronizza_hud()
 
 def disegna_flash_sagoma(target_surface, sprite_visual, colore, alpha):
@@ -25,13 +24,7 @@ def disegna_flash_sagoma(target_surface, sprite_visual, colore, alpha):
     # Disegna la sagoma colorata sopra lo sprite
     target_surface.blit(surf_flash, sprite_visual.pos)
 
-# Sostituisci la vecchia riga testo_turno = "Turno Giocatore 1"
-if len(manager_gioco.giocatori) > 0:
-    testo_turno = f"Turno di {manager_gioco.giocatori[0].nome}"
-else:
-    testo_turno = "Turno Giocatore 1"
-
-# 3. Assegniamo la grafica
+# Assegniamo la grafica
 boss_visual = sprite_temp
 BOSS_MAP = {
     0: Goblin,
@@ -41,8 +34,7 @@ BOSS_MAP = {
     4: SerpenteTreTeste
 }
 # --- SISTEMA NPC ---
-# Assicurati che le classi NPC, SceltaDialogo, ecc. siano nel file LogicaGiocoo_cobra2
-lista_npc = [VecchioSaggio(), GuardiaCorrotta(), VecchioSaggio(), GuardiaCorrotta(), VecchioSaggio()]
+lista_npc = [VecchioSaggio(), GuardiaCorrotta(), VecchioSaggio(), GuardiaCorrotta(), VecchioSaggio()]   #da capire perchè ne metti 5
 npc_attivo = None
 btn_opzioni_npc = [] # Conterrà i Rect dei pulsanti per le risposte
 
@@ -54,47 +46,67 @@ testo_passaggio = " " # sempre per BOSS SCONFITTO
 mostra_label_livello = True   #è la variabile “interruttore” generale che decide se il banner del livello deve essere mostrato o no. DA CAMBIARE NOME IN mostra_label
 indice_testo_label = 0        # Per scorrere tutte le frasi che ho
 mostra_testo_boss = False
-
+colore_banner_attuale = (255, 255, 255)
 # --- VARIABILI TURNO ---
+#scritta per i turni
+if len(manager_gioco.giocatori) > 0: testo_turno = f"Turno di {manager_gioco.giocatori[0].nome}"
+else: testo_turno = "Turno Giocatore 1"
 player_turn = 1  # 1 = Player1, 2 = Player2, 3 = Mostro
 saltata_turno_mostro = 0
 giocatori_fuggiti = [False, False]
-###############scritta
+
 # Gestione feedback visivo nuovi oggetti
 mostra_notifica_item = False
 timer_notifica_item = 0
 testo_notifica_item = ""
 alpha_notifica_item = 0
+
 # --- VARIABILI EFFETTI ---
 boss_attacco_visual = False
 timer_boss_attacco = 0
-
 p1_danno_visual = False
 timer_p1_danno = 0
-
 p2_danno_visual = False
 timer_p2_danno = 0
+
 # --- VARIABILI EFFETTI ---
-durata_effetto = 1300  # Ora dura poco più di un secondo
+durata_effetto = 1300  # dura poco più di un secondo
 nascondi_turno_timer = 0
 durata_effetto = 600 # durata in millisecondi
 shake_intensity = 0
 timer_shake = 0
 
-
-#NPC
 # --- GRAFICA NPC ---
 # Carichiamo gli sprite animati per gli NPC (usa i percorsi corretti delle tue cartelle)
-
 grafica_npc = {
     "VecchioSaggio": AnimatedSprite("old.png", 5, 1, 0, 0, scale=1.1),
-    "GuardiaOscura": AnimatedSprite("guard.png", 5, 1, 0, 0, scale=0.9)
-}
+    "GuardiaOscura": AnimatedSprite("guard.png", 5, 1, 0, 0, scale=0.9) }
 sfondo_dialogo_img = pygame.image.load("sfondo_dialogo.png").convert_alpha()
 sfondo_dialogo_img = pygame.transform.scale(sfondo_dialogo_img, (LARGHEZZA, ALTEZZA))
 # Debug: controlla che l'immagine sia caricata correttamente
 print("Sfondo dialogo dimensioni:", sfondo_dialogo_img.get_size())
 
+
+#per dire cosa succede nel combattimento#
+def disegna_banner_notifica(schermo, testo, colore_bordo):
+    larghezza_schermo = schermo.get_width()
+    altezza_banner = 70
+    y_pos = 150  # Posizione verticale del banner
+    
+    # 1. Rettangolo di sfondo (nero con trasparenza)
+    superficie_banner = pygame.Surface((larghezza_schermo, altezza_banner), pygame.SRCALPHA)
+    superficie_banner.fill((0, 0, 0, 200)) # 200 è l'opacità
+    schermo.blit(superficie_banner, (0, y_pos))
+    
+    # 2. Linee di bordo (sopra e sotto per stile)
+    pygame.draw.line(schermo, colore_bordo, (0, y_pos), (larghezza_schermo, y_pos), 3)
+    pygame.draw.line(schermo, colore_bordo, (0, y_pos + altezza_banner), (larghezza_schermo, y_pos + altezza_banner), 3)
+    
+    # 3. Testo (usa il tuo font già definito)
+    font_banner = pygame.font.SysFont("Arial", 30, bold=True) # O il tuo font
+    testo_render = font_banner.render(testo, True, (255, 255, 255))
+    rect_testo = testo_render.get_rect(center=(larghezza_schermo // 2, y_pos + altezza_banner // 2))
+    schermo.blit(testo_render, rect_testo)
 running = True
 while running:
     #gestione eventi
@@ -175,7 +187,7 @@ while running:
                     if len(nome_inserito) < 12: 
                         nome_inserito += event.unicode
 
-        # --- GESTIONE CLICK MOUSE ---, aggiorna il gioco in base agli eventi
+        # --- GESTIONE CLICK MOUSE ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  #Controlla se il mouse viene premuto con il tasto sinistro
 
             # --- MENU PRINCIPALE ---
@@ -200,7 +212,7 @@ while running:
             # -- SCELTA --
             elif stato_gioco == "SCELTA":
                 #-- NUOVA PARTITA --
-                if btn_nuovo.collidepoint(pos_mouse): 
+                if btn_nuovo.collidepoint(pos_mouse):
                     manager_gioco.livello_corrente = 1
                     gestore_livelli.indice_corrente = 0
                     stato_gioco, indice_lettura = "INTRODUZIONE", 0
@@ -211,36 +223,28 @@ while running:
                         # 1. Recupera l'indice corretto dal manager caricato
                         indice_caricato = max(0, manager_gioco.livello_corrente - 1)
                         gestore_livelli.indice_corrente = indice_caricato
-                        
                         # 2. Riattacca gli osservatori ai player ripristinati
                         for p in manager_gioco.giocatori:
                             p.attach(facade.auto_saver)
-    
                         # 3. Rigenera la GRAFICA (Posizioni e Scale)
-                        # Questa funzione deve solo calcolare dove disegnare, non ricreare la logica
                         nuovo_p1, nuovo_p2, nuovo_visual = aggiorna_posizioni_e_scale(LARGHEZZA, ALTEZZA, gestore_livelli.indice_corrente)
                         personaggio1, personaggio2 = nuovo_p1, nuovo_p2
                         boss_visual = nuovo_visual
-                        
+    
                         # 4. SINCRONIZZAZIONE LOGICA/GRAFICA BOSS
-                        # Se il manager ha già caricato il boss dal disco, lo usiamo
-                        if manager_gioco.boss_attuale:
-                            # Aggiorniamo la sua posizione logica affinché la barra vita lo segua
-                            manager_gioco.boss_attuale.pos = [boss_visual.pos[0], boss_visual.pos[1]]
-                            # FONDAMENTALE: aggiorna la variabile 'goblin' usata nel loop principale
+                        if manager_gioco.boss_attuale:  #Se il manager ha già caricato il boss dal disco, lo usiamo
+                            manager_gioco.boss_attuale.pos = [boss_visual.pos[0], boss_visual.pos[1]]   ## Aggiorniamo la sua posizione logica affinché la barra vita lo segua
                             boss = manager_gioco.boss_attuale
                             print(f"Caricato Boss: {manager_gioco.boss_attuale.nome} con HP: {manager_gioco.boss_attuale.hp}")
-
                         else:
                             print("ERRORE GRAVE: boss_attuale mancante dopo il load")
 
-                        # 5. Sincronizza l'HUD (Questo collega fisicamente la HealthBar ai dati del boss caricato)
+                        # 5.Sincronizza l'HUD
                         sincronizza_hud()
                         # 6. Avvia il gioco
                         stato_gioco = "GAMEPLAY"
                         #mostra_label_livello = True    #levato per evitare che appaia di nuovo il banner
                         indice_testo_label = 0
-                        
                     else: 
                         print("Errore: Nessun salvataggio trovato.")
 
@@ -295,7 +299,7 @@ while running:
                     nuovo_indice = gestore_livelli.indice_corrente
                     mostra_label_livello = True
                     indice_testo_label = 0
-                     # RESET TURNO PLAYER
+                    # RESET TURNO PLAYER
                     player_turn = 1
                     nome_p1 = manager_gioco.giocatori[0].nome if len(manager_gioco.giocatori) > 0 else "P1"
                     testo_turno = f"Turno di {nome_p1}"
@@ -310,14 +314,12 @@ while running:
                         manager_gioco.boss_attuale = ClasseBoss(
                             x=boss_visual.pos[0],
                             y=boss_visual.pos[1])
-
-                    # 3. SINCRONIZZA HUD (Indispensabile per aggiornare l'Observer della barra)
                     sincronizza_hud()
                     
-                        # --- DIALOGO NPC ---
+            # --- DIALOGO NPC ---
             elif stato_gioco == "DIALOGO_NPC":
-                for i, btn in enumerate(btn_opzioni_npc):
-                    if btn.collidepoint(pos_mouse):
+                for i, btn in enumerate(btn_opzioni_npc):   #per ogni pulsante di risposta
+                    if btn.collidepoint(pos_mouse):         #se il mouse clicca su quel pulsante
                         # Applica gli effetti della scelta
                         for p in manager_gioco.giocatori:
                             npc_attivo.interagisci(p, i)
@@ -332,22 +334,20 @@ while running:
 
                 # 🔒 BLOCCO TOTALE LOGICA se deve spunta "BOSS SCONFITTO"
                 if mostra_messaggio_livello: pass
-                else:
-                    #aggiungi cose inventario
-                    # --- AVANZA LABEL LIVELLO ---
-                    if mostra_label_livello and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                elif mostra_label_livello:
+                    # --- MOSTRA LABEL LIVELLO INIZIALE ---
+                    livello_corrente = gestore_livelli.indice_corrente
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                         indice_testo_label += 1
-                        click_valido = True
-                        livello_corrente = gestore_livelli.indice_corrente
+                        #click_valido = True
                         if indice_testo_label >= len(testi_livello[livello_corrente]):
                             mostra_label_livello = False
                             indice_testo_label = 0
-
-            # 1. Recuperiamo il boss dal manager in modo sicuro
+                else:
+                    #Recuperiamo il boss dal manager in modo sicuro
                     boss = manager_gioco.boss_attuale
-                    # 2. Controllo Vittoria Livello
+                    # Controllo Vittoria Livello
                     if boss and not boss.is_alive() and not mostra_messaggio_livello:   #Se il boss è morto e non stiamo già mostrando il messaggio
-                        # mostra il messaggio
                         if gestore_livelli.indice_corrente < 4: 
                             mostra_messaggio_livello = True
                             timer_messaggio = pygame.time.get_ticks()
@@ -359,7 +359,6 @@ while running:
                             alpha_fade = 255
                             colore_transizione = (255, 255, 255)
                             fase_transizione = "SVELA_VITTORIA"   
-
                     else:                    
                         # --- PLAYER 1 INVENTARIO ---
                         tab_p1_cliccata = False
@@ -368,12 +367,10 @@ while running:
                                 if 20 < pos_mouse[0] < 80: idx_cat_p1 = 0; tab_p1_cliccata = True
                                 elif 80 < pos_mouse[0] < 140: idx_cat_p1 = 1; tab_p1_cliccata = True
                                 elif 140 < pos_mouse[0] < 200: idx_cat_p1 = 2; tab_p1_cliccata = True
-
                         # Se non abbiamo cliccato una TAB, allora controlliamo il pulsante INV
                         if not tab_p1_cliccata and rect_btn_p1.collidepoint(pos_mouse):
                             inv_p1_aperto = not inv_p1_aperto
                             
-
                         # --- PLAYER 2 INVENTARIO ---
                         tab_p2_cliccata = False
                         x_inv_p2 = LARGHEZZA - 305 
@@ -385,12 +382,10 @@ while running:
                                     idx_cat_p2 = 1; tab_p2_cliccata = True
                                 elif x_inv_p2 + 120 < pos_mouse[0] < x_inv_p2 + 180:
                                     idx_cat_p2 = 2; tab_p2_cliccata = True
-
                         # Solo se NON ho cliccato una tab, controllo se devo chiudere l'inventario
                         if not tab_p2_cliccata and rect_btn_p2.collidepoint(pos_mouse):
                             inv_p2_aperto = not inv_p2_aperto
                             
-
                         # --- GESTIONE TURNI ---
                         if player_turn == 1 and not giocatori_fuggiti[0]:
                             player = manager_gioco.giocatori[0]
@@ -418,6 +413,7 @@ while running:
                                 if successo:
                                     saltata_turno_mostro += 1
                                 click_valido = True
+
                             # Aggiorna turno
                             if click_valido:
                                 if not giocatori_fuggiti[1]: 
@@ -426,7 +422,6 @@ while running:
                                     testo_turno = f"Turno di {nome_p2}"
                                 else:
                                     player_turn = 3
-
         
                         elif player_turn == 2 and not giocatori_fuggiti[1]:
                             player = manager_gioco.giocatori[1]
@@ -455,24 +450,29 @@ while running:
                                     saltata_turno_mostro += 1
                                 click_valido = True
                                 
-                            if click_valido:
                             # Aggiorna turno
-                                player_turn = 3
-                            # Mostra turno corrente
+                            if click_valido: player_turn = 3
 
                         # --- TURNO DEL BOSS ---
                         if player_turn == 3:
                             boss = manager_gioco.boss_attuale
 
                             if all(giocatori_fuggiti):
-                                print("Entrambi i giocatori sono fuggiti! Mostro sconfitto!")
-                                boss.hp = 0
-                                giocatori_fuggiti = [False, False]  # reset
+                                testo_turno_boss = "ENTRAMBI I GIOCATORI SONO FUGGITI!" # Aggiungi questa riga!
+                                colore_banner_attuale = (0, 255, 255) 
+                                mostra_testo_boss = True
+                                fade_testo_boss = 255
+                                timer_testo_boss = pygame.time.get_ticks()
+                                
+                                # Non azzerare gli HP qui se vuoi che il boss resti visibile mentre appare il banner
+                                boss.hp = 0 
+                                giocatori_fuggiti = [False, False]
                                 player_turn = 1
                             else:
                                 # Attacca solo i giocatori presenti
                                 if saltata_turno_mostro > 0:
                                     testo_turno_boss = "Il mostro sembra confuso e salta il turno!"
+                                    colore_banner_attuale = (255, 255, 0) 
                                     mostra_testo_boss = True
                                     timer_testo_boss = pygame.time.get_ticks()
                                     fade_testo_boss = 255
@@ -487,6 +487,7 @@ while running:
                                     timer_shake = pygame.time.get_ticks()
 
                                     testo_turno_boss = f"Il mostro attacca e infligge {boss.danno} danni"
+                                    colore_banner_attuale = (255, 0, 0) 
                                     mostra_testo_boss = True
                                     timer_testo_boss = pygame.time.get_ticks()
                                     fade_testo_boss = 255
@@ -502,7 +503,7 @@ while running:
                                         p2_danno_visual = True
                                         timer_p2_danno = pygame.time.get_ticks()
 
-                            # --- GESTIONE PASSAGGIO TURNO ---
+                            # --- PASSAGGIO TURNO ---
                             # Aspettiamo il primo giocatore disponibile che non sia fuggito
                             nascondi_turno_timer = pygame.time.get_ticks()
                             if not giocatori_fuggiti[0]:
@@ -517,7 +518,7 @@ while running:
                                 player_turn = 1 # Fallback
 
             
-    #1. Controllo dello stato del gioco, recap
+    #--- DISEGNO SCHERMATE ---
     sfondo_base = None
     if stato_gioco in ["MENU", "SCELTA", "SETTINGS"]: 
         sfondo_base = sfondi["menu"]
@@ -591,13 +592,10 @@ while running:
 
     elif stato_gioco == "MAPPA_MONDI":
         screen.blit(sfondi["mondi"][gestore_livelli.indice_corrente], (0, 0)) # Prima sfondo
-        # DISEGNA BANNER LIVELLO
-        
 
         overlay = pygame.Surface((LARGHEZZA, ALTEZZA), pygame.SRCALPHA) #testi MAPPA_MONDI
         overlay.fill((0, 0, 0, 160))
         screen.blit(overlay, (0, 0))
-
         draw_text_centered("I MONDI SI ALLINEANO", pygame.Rect(0, ALTEZZA // 2 - 50, LARGHEZZA, 50), (255, 255, 255), font_titolo)
         
         # Calcolo del numero livello: indice 0 -> Livello 1, indice 1 -> Livello 2...
@@ -607,9 +605,8 @@ while running:
         draw_text_centered(testo_dinamico, pygame.Rect(0, ALTEZZA // 2 + 30, LARGHEZZA, 30), (200, 200, 200), f_istruzioni)
     
 
-
     elif stato_gioco == "GAMEPLAY":
-        # --- DISEGNO SFONDO ATTUALE ---
+        # ------- DISEGNO SFONDO ATTUALE ------
         # Recupera lo sfondo basandosi sull'indice appena aggiornato
         idx = gestore_livelli.indice_corrente
         sfondo_attuale = gestore_livelli.get_livello_attuale()    
@@ -680,7 +677,6 @@ while running:
                 # 5. CONSEGNA ITEMS (Factory del livello)
                 factory_map = {0: Livello1Item(), 1: Livello2Item(), 2: Livello3Item(), 3: Livello4Item(), 4: Livello5Item()}
                 factory = factory_map.get(min(nuovo_idx, 4))
-                
                 if factory:
                     for player in manager_gioco.giocatori:
                         arma_logica = factory.create_arma()
@@ -688,12 +684,11 @@ while running:
                         armatura_logica = factory.create_armatura()
                         InventoryUI.aggiorna_inventario(player, arma_logica, pozione_logica, armatura_logica)
 
-                        # --- QUESTA È LA PARTE CHE MANCAVA ---
+                        #Banner di notifica oggetti ricevuti
                         ricevuti = []
                         if arma_logica: ricevuti.append(arma_logica.__class__.__name__)
                         if pozione_logica: ricevuti.append(pozione_logica.__class__.__name__)
                         if armatura_logica: ricevuti.append(armatura_logica.__class__.__name__)
-
                         if ricevuti:
                             mostra_notifica_item = True
                             timer_notifica_item = pygame.time.get_ticks()
@@ -764,8 +759,6 @@ while running:
                 
                 if mostra_notifica_item:
                     font_notifica = pygame.font.SysFont("Constantia", 30, bold=True, italic=True)
-                    
-                    # --- AGGIUNTA: Rettangolo di sfondo scuro ---
                     # Creiamo una fascia nera semitrasparente larga quanto lo schermo
                     surf_bg = pygame.Surface((LARGHEZZA, 60), pygame.SRCALPHA)
                     # Usiamo l'alpha della notifica per far sfumare anche il rettangolo
@@ -777,10 +770,8 @@ while running:
                     # Colore Oro per dare l'idea di un premio raro
                     surf_notifica = font_notifica.render(testo_notifica_item, True, (255, 215, 0))
                     surf_notifica.set_alpha(alpha_notifica_item)
-                    
                     # Posizionamento al centro dello schermo (parte alta)
                     rect_notifica = surf_notifica.get_rect(center=(LARGHEZZA // 2, 300))
-                    
                     # Un piccolo bagliore nero dietro per leggere meglio
                     ombra = font_notifica.render(testo_notifica_item, True, (0, 0, 0))
                     ombra.set_alpha(alpha_notifica_item)
@@ -791,23 +782,36 @@ while running:
             # --- DISEGNO HUD ---
             font_hint = pygame.font.SysFont("Arial", 11, bold=True, italic=True)
             colore_hint = (200, 200, 200)
-
-            # Font piccolo per altri testi normali
             font_piccolo = pygame.font.SysFont("Constantia", 18, bold=True)
-            # --- MODIFICA QUI: Disegna il turno solo se è finito il secondo di pausa ---
+            # --- Disegna il turno solo se è finito il secondo di pausa ---
             if pygame.time.get_ticks() - nascondi_turno_timer > 1000:
                 draw_text_centered(testo_turno, pygame.Rect(0, 10, LARGHEZZA, 40), (255, 255, 255), font_piccolo)
-            
 
-            # Testo del boss con fade
+                        # Testo del boss con fade
+                        # --- DISEGNO BANNER NOTIFICA BOSS (Attacco, Fuga, Confusione) ---
             if mostra_testo_boss:
-                txt_surf = font_piccolo.render(testo_turno_boss, True, (255, 255, 0))
-                txt_surf.set_alpha(fade_testo_boss)
-                screen.blit(txt_surf, (LARGHEZZA // 2 - txt_surf.get_width() // 2, 50))
+                # 1. Creazione della fascia nera semitrasparente
+                altezza_banner = 60
+                y_banner = 50 # Posizione verticale
+                surf_banner = pygame.Surface((LARGHEZZA, altezza_banner), pygame.SRCALPHA)
+                
+                # Usiamo lo stesso fade_testo_boss per far sparire anche il banner
+                bg_alpha = int(fade_testo_boss * 0.9) # 60% dell'opacità attuale
+                surf_banner.fill((0, 0, 0, bg_alpha))
+                screen.blit(surf_banner, (0, y_banner - 10))
 
-                # Fade out
+                # 2. Rendering del testo (Usa il colore_banner_attuale impostato nella logica)
+                # Se non hai ancora definito colore_banner_attuale, usa (255, 255, 0) di default
+                txt_surf = font_piccolo.render(testo_turno_boss, True, colore_banner_attuale)
+                txt_surf.set_alpha(fade_testo_boss)
+                
+                # Centratura testo nel banner
+                txt_rect = txt_surf.get_rect(center=(LARGHEZZA // 2, y_banner + altezza_banner // 2 - 10))
+                screen.blit(txt_surf, txt_rect)
+
+                # 3. Logica di Fade Out (già presente nel tuo codice)
                 tempo_trascorso = pygame.time.get_ticks() - timer_testo_boss
-                if tempo_trascorso > 500:  # dopo mezzo secondo inizia a scomparire
+                if tempo_trascorso > 1500:  # Aumentato a 1.5 secondi per dare tempo di leggere
                     fade_testo_boss -= 5
                     if fade_testo_boss <= 0:
                         fade_testo_boss = 0
@@ -819,7 +823,6 @@ while running:
             if hud["p1_health"]:
                 hud["p1_health"].disegna(screen)
                 screen.blit(font_hint.render("[TAB] STATS", True, colore_hint), (20, 48))
-
             pygame.draw.rect(screen, (60, 60, 60), rect_btn_p1, border_radius=5)
             draw_text_centered("INV", rect_btn_p1, (255, 215, 0), pygame.font.SysFont("Arial", 10, bold=True))
             if inv_p1_aperto and hud["p1_inv"]: hud["p1_inv"].disegna(screen, cat_p1)
@@ -833,7 +836,6 @@ while running:
                 hud["p2_health"].disegna(screen)
                 txt_p2 = font_hint.render("[ \\ ] STATS", True, colore_hint)
                 screen.blit(txt_p2, (LARGHEZZA - txt_p2.get_width() - 20, 48))
-
             pygame.draw.rect(screen, (60, 60, 60), rect_btn_p2, border_radius=5)
             draw_text_centered("INV", rect_btn_p2, (255, 215, 0), pygame.font.SysFont("Arial", 10, bold=True))
             if inv_p2_aperto and hud["p2_inv"]:
@@ -842,33 +844,29 @@ while running:
             if stats_p2_aperte and len(manager_gioco.giocatori) > 1: 
                 disegna_pannello_stats(screen, manager_gioco.giocatori[1], LARGHEZZA - 170, 100)
 
+            # 3. BOSS HEALTH BAR
             if hud.get("boss_health") and manager_gioco.boss_attuale and manager_gioco.boss_attuale.is_alive():
                 boss_logico = manager_gioco.boss_attuale
                 nome = boss_logico.nome.strip().lower()
-
                 # Prendi coordinate attuali dello sprite
                 boss_x, boss_y = boss_visual.pos
                 frame = boss_visual.frames[0]
                 larg_boss, alt_boss = frame.get_width(), frame.get_height()
-
                 # Dimensioni barra
                 w_b, h_b = 140, 12
                 off_y = 10
-
                 # Posizione predefinita della barra sopra la testa
                 bx = boss_x + (larg_boss // 2) - (w_b // 2)
                 by = boss_y - h_b - off_y
 
-                # Barretta predefinita sopra la testa
+                # Barra predefinita sopra la testa
                 if nome == "goblin":
                     # bx centrato rispetto al boss, poi piccolo aggiustamento
                     bx = boss_visual.pos[0] + (larg_boss // 2) - (w_b // 2) - 100  
                     by = boss_visual.pos[1] + alt_boss - 430  # sotto il corpo del Goblin
-
                 elif nome == "serpente a tre teste":
                     bx = boss_visual.pos[0] + (larg_boss // 2) - (w_b // 2) + 60
                     by = boss_visual.pos[1] + alt_boss - 300
-
                 elif nome == "yeti delle nevi":
                     bx = boss_visual.pos[0] + (larg_boss // 2) - (w_b // 2)
                     by = boss_visual.pos[1] + alt_boss - 350
@@ -882,7 +880,6 @@ while running:
                 txt_nome = f_boss.render(boss_logico.nome.upper(), True, (255, 255, 255))
                 screen.blit(txt_nome, (bx + (w_b // 2) - (txt_nome.get_width() // 2), by - 18))
 
-
             # 4. BOTTONI AZIONI (Sempre in primo piano)
             for btn, txt, col in [
                 (btn_attacca, "ATTACCA", (192, 57, 43)), 
@@ -892,7 +889,7 @@ while running:
                 pygame.draw.rect(screen, col, btn, border_radius=8)
                 draw_text_centered(txt, btn, (255, 255, 255))
 
-
+            # 2. NON CAPITPO
             pygame.draw.rect(screen, (60, 60, 60), rect_btn_p2, border_radius=5)
             draw_text_centered("INV", rect_btn_p2, (255, 215, 0), pygame.font.SysFont("Arial", 10, bold=True))
             if inv_p2_aperto and hud["p2_inv"]:
@@ -988,7 +985,6 @@ while running:
             draw_text_centered(opzione.testo, rect, (255, 255, 255), f_npc)
 
 
-
     elif stato_gioco == "VITTORIA":
         screen.fill((10, 10, 20))
 
@@ -1007,30 +1003,10 @@ while running:
         y_sub = int(h * 0.55)
         y_hint = int(h * 0.90)
 
-        draw_text_centered(
-            "IL MALE È STATO ABBATTUTO",
-            pygame.Rect(2, y_titolo + 2, w, titolo_size),
-            (50, 50, 50),
-            font_titolo
-        )
-        draw_text_centered(
-            "IL MALE È STATO ABBATTUTO",
-            pygame.Rect(0, y_titolo, w, titolo_size),
-            (255, 255, 255),
-            font_titolo
-        )
-        draw_text_centered(
-            "FINALMENTE SEI LIBERO!",
-            pygame.Rect(0, y_sub, w, sub_size),
-            (0, 255, 150),
-            font_titolo
-        )
-        draw_text_centered(
-            "Premi ESC per tornare al menu",
-            pygame.Rect(0, y_hint, w, hint_size),
-            (100, 100, 100),
-            font_bottoni
-        )
+        draw_text_centered("IL MALE È STATO ABBATTUTO", pygame.Rect(2, y_titolo + 2, w, titolo_size), (50, 50, 50), font_titolo)
+        draw_text_centered("IL MALE È STATO ABBATTUTO",pygame.Rect(0, y_titolo, w, titolo_size),(255, 255, 255),font_titolo)
+        draw_text_centered("FINALMENTE SEI LIBERO!",pygame.Rect(0, y_sub, w, sub_size),(0, 255, 150),font_titolo)
+        draw_text_centered("Premi ESC per tornare al menu",pygame.Rect(0, y_hint, w, hint_size),(100, 100, 100),font_bottoni)
 
     # 7. Gestione Fade e Transizioni
     if alpha_fade > 0:
@@ -1039,11 +1015,8 @@ while running:
         fade_surf.set_alpha(alpha_fade)
         screen.blit(fade_surf, (0, 0))
 
-        if fase_transizione == "FINE":
-            alpha_fade -= 5
-        elif fase_transizione == "SVELA_VITTORIA":
-            alpha_fade -= 2
-
+        if fase_transizione == "FINE":alpha_fade -= 5
+        elif fase_transizione == "SVELA_VITTORIA":alpha_fade -= 2
         if alpha_fade <= 0:
             alpha_fade = 0
             fase_transizione = None
@@ -1064,22 +1037,11 @@ while running:
         y_main = int(h * 0.45)
         y_hint = int(h * 0.90)
 
-        draw_text_centered(
-            "HAI FALLITO LA MISSIONE",
-            pygame.Rect(0, y_main, w, main_size),
-            (200, 0, 0),
-            font_main
-        )
-        draw_text_centered(
-            "Premi ESC per tornare al menu",
-            pygame.Rect(0, y_hint, w, sub_size),
-            (100, 100, 100),
-            font_sub
-        )
+        draw_text_centered("HAI FALLITO LA MISSIONE",pygame.Rect(0, y_main, w, main_size), (200, 0, 0), font_main)
+        draw_text_centered("Premi ESC per tornare al menu", pygame.Rect(0, y_hint, w, sub_size),(100, 100, 100),font_sub)
 
     pygame.display.flip()
     clock.tick(60)
-
 
 pygame.quit()
 sys.exit()
