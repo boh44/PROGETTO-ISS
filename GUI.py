@@ -5,6 +5,7 @@ import os
 from LogicaGioco import *
 from main import *
 import random
+import math
 
 #Otteniamo lo sprite grafico
 personaggio1, personaggio2, sprite_temp = aggiorna_posizioni_e_scale(LARGHEZZA, ALTEZZA)
@@ -68,12 +69,13 @@ p1_danno_visual = False
 timer_p1_danno = 0
 p2_danno_visual = False
 timer_p2_danno = 0
-
+# --- VARIABILI DI STATO GRAFICO ---
+boss_danno_visual = False  # Indica se il boss deve lampeggiare di rosso
+timer_boss_danno = 0       # Memorizza il momento in cui è stato colpito
 # --- VARIABILI EFFETTI ---
-durata_effetto = 1300  # dura poco più di un secondo
 nascondi_turno_timer = 0
 durata_effetto = 600 # durata in millisecondi
-shake_intensity = 0
+shake_intensity = 10
 timer_shake = 0
 
 # --- GRAFICA NPC ---
@@ -86,6 +88,25 @@ sfondo_dialogo_img = pygame.transform.scale(sfondo_dialogo_img, (LARGHEZZA, ALTE
 # Debug: controlla che l'immagine sia caricata correttamente
 print("Sfondo dialogo dimensioni:", sfondo_dialogo_img.get_size())
 
+def draw_text_wrapped(surface, testo, rect, colore, font):
+    parole = testo.split(' ')
+    righe = []
+    riga_attuale = ""
+    for parola in parole:
+        test_riga = riga_attuale + parola + " "
+        if font.size(test_riga)[0] < rect.width - 40:
+            riga_attuale = test_riga
+        else:
+            righe.append(riga_attuale)
+            riga_attuale = parola + " "
+    righe.append(riga_attuale)
+
+    interlinea = font.get_linesize()
+    altezza_totale = len(righe) * interlinea
+    y_inizio = rect.y + (rect.height - altezza_totale) // 2
+    for i, riga in enumerate(righe):
+        txt_surf = font.render(riga.strip(), True, colore)
+        surface.blit(txt_surf, (rect.centerx - txt_surf.get_width()//2, y_inizio + i * interlinea))
 
 #per dire cosa succede nel combattimento#
 def disegna_banner_notifica(schermo, testo, colore_bordo):
@@ -107,6 +128,13 @@ def disegna_banner_notifica(schermo, testo, colore_bordo):
     testo_render = font_banner.render(testo, True, (255, 255, 255))
     rect_testo = testo_render.get_rect(center=(larghezza_schermo // 2, y_pos + altezza_banner // 2))
     schermo.blit(testo_render, rect_testo)
+
+# Aggiungi queste variabili all'inizio del file
+risposta_p1_data = False
+risposta_p2_data = False
+btn_opzioni_p1 = []
+btn_opzioni_p2 = []
+font_piccolo = pygame.font.SysFont("Constantia", 18, bold=True)
 running = True
 while running:
     #gestione eventi
@@ -247,7 +275,8 @@ while running:
                             indice_testo_label = 0
                         
                         # 5. SINCRONIZZAZIONE LOGICA/GRAFICA BOSS
-                        if manager_gioco.boss_attuale:
+                        # Sostituisci la riga incriminata con questa sicurezza:
+                        if manager_gioco.boss_attuale and boss_visual:
                             manager_gioco.boss_attuale.pos = [boss_visual.pos[0], boss_visual.pos[1]]
                             manager_gioco.boss_attuale.attach(facade.auto_saver) # Riattacca observer al boss
                             print(f"Caricato Boss: {manager_gioco.boss_attuale.nome} con HP: {manager_gioco.boss_attuale.hp}")
@@ -309,11 +338,12 @@ while running:
                     nuovo_indice = gestore_livelli.indice_corrente
                     mostra_label_livello = True
                     indice_testo_label = 0
+                    giocatori_fuggiti = [False, False]
                     # RESET TURNO PLAYER
                     player_turn = 1
                     nome_p1 = manager_gioco.giocatori[0].nome if len(manager_gioco.giocatori) > 0 else "P1"
                     testo_turno = f"Turno di {nome_p1}"
-                                
+                    
                     # 1. Aggiorna grafica
                     p1, p2, visual = aggiorna_posizioni_e_scale(LARGHEZZA, ALTEZZA, nuovo_indice)
                     boss_visual = visual
@@ -326,29 +356,39 @@ while running:
                             y=boss_visual.pos[1])
                     sincronizza_hud()
                     
-            # --- DIALOGO NPC ---
+            # --- DIALOGO NPC (LOGICA INPUT) ---
             elif stato_gioco == "DIALOGO_NPC":
-                for i, btn in enumerate(btn_opzioni_npc):   #per ogni pulsante di risposta
-                    if btn.collidepoint(pos_mouse):         #se il mouse clicca su quel pulsante
-                        # Applica gli effetti della scelta
-                        for p in manager_gioco.giocatori:
-                            npc_attivo.interagisci(p, i)
+                # Gestione Player 1 (Sinistra)
+                if not risposta_p1_data and len(manager_gioco.giocatori) > 0:
+                    for i, btn in enumerate(btn_opzioni_p1):
+                        if btn.collidepoint(pos_mouse):
+                            npc_attivo.interagisci(manager_gioco.giocatori[0], i)
+                            risposta_p1_data = True
+                
+                # Gestione Player 2 (Destra)
+                if not risposta_p2_data and len(manager_gioco.giocatori) > 1:
+                    for i, btn in enumerate(btn_opzioni_p2):
+                        if btn.collidepoint(pos_mouse):
+                            npc_attivo.interagisci(manager_gioco.giocatori[1], i)
+                            risposta_p2_data = True
 
-                        # --- AGGIUNTA PER MEMENTO ---
-                        manager_gioco.npc_in_corso = False # Dialogo terminato
-                        manager_gioco.giocatori[0].notify() 
-
-                        # Sostituisci facade.salva_su_disco() con questa riga:
-                        facade.auto_saver.update(manager_gioco)
-                        # Torna alla mappa mondi
-                        stato_gioco = "MAPPA_MONDI"
-                        fase_transizione = "FINE"
+                # Controllo finale: se entrambi hanno risposto (o se il P2 non esiste)
+                if risposta_p1_data and (risposta_p2_data or len(manager_gioco.giocatori) < 2):
+                    manager_gioco.npc_in_corso = False
+                    # Reset per il prossimo incontro
+                    risposta_p1_data = False
+                    risposta_p2_data = False
+                    
+                    manager_gioco.giocatori[0].notify()
+                    facade.auto_saver.update(manager_gioco)
+                    stato_gioco = "MAPPA_MONDI"
+                    fase_transizione = "FINE"
 
             # --- GAMEPLAY ---    
             elif stato_gioco == "GAMEPLAY":
                 click_valido = False
 
-                # 🔒 BLOCCO TOTALE LOGICA se deve spunta "BOSS SCONFITTO"
+                #  BLOCCO TOTALE LOGICA se deve spunta "BOSS SCONFITTO"
                 if mostra_messaggio_livello: pass
                 elif mostra_label_livello:
                     # --- MOSTRA LABEL LIVELLO INIZIALE ---
@@ -379,26 +419,59 @@ while running:
                         # --- PLAYER 1 INVENTARIO ---
                         tab_p1_cliccata = False
                         if inv_p1_aperto:
+                            # 1. Controllo Cambio Tab (Righe già esistenti)
                             if 90 < pos_mouse[1] < 125: 
                                 if 20 < pos_mouse[0] < 80: idx_cat_p1 = 0; tab_p1_cliccata = True
                                 elif 80 < pos_mouse[0] < 140: idx_cat_p1 = 1; tab_p1_cliccata = True
                                 elif 140 < pos_mouse[0] < 200: idx_cat_p1 = 2; tab_p1_cliccata = True
-                        # Se non abbiamo cliccato una TAB, allora controlliamo il pulsante INV
+                            
+                            # 2. AGGIUNTA: Uso Pozione (Se clicca sotto le Tab nell'area oggetti)
+                            elif 125 < pos_mouse[1] < 180: # Area degli slot oggetti
+                                player1 = manager_gioco.giocatori[0]
+                                if categorie_disponibili[idx_cat_p1] == "Cura":
+                                    # Cerca la prima pozione di tipo 'Cura' nell'inventario
+                                    pozione = next((item for item in player1._inventario if item.tipo == "Cura"), None)
+                                    if pozione:
+                                        player1.usa_pozione(pozione) # Applica i benefici (HP)
+                                        player1.remove_item(pozione) # Scompare dall'inventario
+                                        
+                                        # Feedback visivo
+                                        testo_turno_boss = f"{player1.nome} usa una Pozione!"
+                                        colore_banner_attuale = (0, 255, 150)
+                                        mostra_testo_boss = True
+                                        timer_testo_boss = pygame.time.get_ticks()
+                                        fade_testo_boss = 255
+                                        tab_p1_cliccata = True # Impedisce di chiudere l'inv col click sotto
+
                         if not tab_p1_cliccata and rect_btn_p1.collidepoint(pos_mouse):
                             inv_p1_aperto = not inv_p1_aperto
                             
                         # --- PLAYER 2 INVENTARIO ---
                         tab_p2_cliccata = False
                         x_inv_p2 = LARGHEZZA - 305 
-                        if inv_p2_aperto:
+                        if inv_p2_aperto and len(manager_gioco.giocatori) > 1:
+                            # 1. Controllo Cambio Tab
                             if 90 < pos_mouse[1] < 125:
-                                if x_inv_p2 < pos_mouse[0] < x_inv_p2 + 60:
-                                    idx_cat_p2 = 0; tab_p2_cliccata = True
-                                elif x_inv_p2 + 60 < pos_mouse[0] < x_inv_p2 + 120:
-                                    idx_cat_p2 = 1; tab_p2_cliccata = True
-                                elif x_inv_p2 + 120 < pos_mouse[0] < x_inv_p2 + 180:
-                                    idx_cat_p2 = 2; tab_p2_cliccata = True
-                        # Solo se NON ho cliccato una tab, controllo se devo chiudere l'inventario
+                                if x_inv_p2 < pos_mouse[0] < x_inv_p2 + 60: idx_cat_p2 = 0; tab_p2_cliccata = True
+                                elif x_inv_p2 + 60 < pos_mouse[0] < x_inv_p2 + 120: idx_cat_p2 = 1; tab_p2_cliccata = True
+                                elif x_inv_p2 + 120 < pos_mouse[0] < x_inv_p2 + 180: idx_cat_p2 = 2; tab_p2_cliccata = True
+                            
+                            # 2. AGGIUNTA: Uso Pozione P2
+                            elif 125 < pos_mouse[1] < 180:
+                                player2 = manager_gioco.giocatori[1]
+                                if categorie_disponibili[idx_cat_p2] == "Cura":
+                                    pozione = next((item for item in player2._inventario if item.tipo == "Cura"), None)
+                                    if pozione:
+                                        player2.usa_pozione(pozione)
+                                        player2.remove_item(pozione)
+                                        
+                                        testo_turno_boss = f"{player2.nome} usa una Pozione!"
+                                        colore_banner_attuale = (0, 255, 150)
+                                        mostra_testo_boss = True
+                                        timer_testo_boss = pygame.time.get_ticks()
+                                        fade_testo_boss = 255
+                                        tab_p2_cliccata = True
+
                         if not tab_p2_cliccata and rect_btn_p2.collidepoint(pos_mouse):
                             inv_p2_aperto = not inv_p2_aperto
                             
@@ -410,6 +483,9 @@ while running:
                             if btn_attacca.collidepoint(pos_mouse):
                                 boss = manager_gioco.boss_attuale
                                 player.attacca(boss, arma_corrente)
+                                # --- EFFETTO ROSSO SUL BOSS ---
+                                boss_danno_visual = True # Attiva il filtro rosso
+                                timer_boss_danno = pygame.time.get_ticks()
                                 click_valido = True
                                 # Controllo immediato morte boss
                                 if boss and not boss.is_alive() and not mostra_messaggio_livello:
@@ -422,12 +498,33 @@ while running:
                             elif btn_fuggi.collidepoint(pos_mouse):
                                 successo = player.fuggi(manager_gioco.boss_attuale)
                                 if successo:
-                                    giocatori_fuggiti[0] = True
+                                    giocatori_fuggiti[0] = True # O [1] se è il Player 2
+                                    testo_turno_boss = f"{player.nome} è fuggito con successo!"
+                                    colore_banner_attuale = (127, 140, 141) # Grigio successo
+                                else:
+                                    testo_turno_boss = f"{player.nome} non è riuscito a scappare!"
+                                    colore_banner_attuale = (255, 165, 0)   # Arancione fallimento
+                                
+                                # Attivazione banner comune (successo e fallimento)
+                                mostra_testo_boss = True
+                                fade_testo_boss = 255
+                                timer_testo_boss = pygame.time.get_ticks()
                                 click_valido = True
+
                             elif btn_ragiona.collidepoint(pos_mouse):
                                 successo = player.ragiona(manager_gioco.boss_attuale)
                                 if successo:
                                     saltata_turno_mostro += 1
+                                    testo_turno_boss = f"{player.nome} ha convinto il mostro a calmarsi!"
+                                    colore_banner_attuale = (39, 174, 96)   # Verde successo
+                                else:
+                                    testo_turno_boss = f"{player.nome} non è stato convincente!"
+                                    colore_banner_attuale = (192, 57, 43)   # Rosso fallimento
+                                
+                                # Attivazione banner comune (successo e fallimento)
+                                mostra_testo_boss = True
+                                fade_testo_boss = 255
+                                timer_testo_boss = pygame.time.get_ticks()
                                 click_valido = True
 
                             # Aggiorna turno
@@ -438,7 +535,7 @@ while running:
                                     testo_turno = f"Turno di {nome_p2}"
                                 else:
                                     player_turn = 3
-        
+                        #player 2
                         elif player_turn == 2 and not giocatori_fuggiti[1]:
                             player = manager_gioco.giocatori[1]
                             arma_corrente = next(iter(player._inventario), None).oggetto if len(player._inventario) > 0 else None
@@ -446,6 +543,9 @@ while running:
                             if btn_attacca.collidepoint(pos_mouse):
                                 boss = manager_gioco.boss_attuale
                                 player.attacca(boss, arma_corrente)
+                                # --- EFFETTO ROSSO SUL BOSS ---
+                                boss_danno_visual = True # Attiva il filtro rosso
+                                timer_boss_danno = pygame.time.get_ticks()
                                 click_valido = True
                                 if boss and not boss.is_alive() and not mostra_messaggio_livello:
                                     mostra_messaggio_livello = True
@@ -458,12 +558,32 @@ while running:
                                 successo = player.fuggi(manager_gioco.boss_attuale)
                                 if successo:
                                     giocatori_fuggiti[1] = True
+                                    testo_turno_boss = f"{player.nome} è fuggito con successo!"
+                                    colore_banner_attuale = (127, 140, 141) # Grigio successo
+                                else:
+                                    testo_turno_boss = f"{player.nome} non è riuscito a scappare!"
+                                    colore_banner_attuale = (255, 165, 0)   # Arancione fallimento
+                                
+                                # Attivazione banner comune
+                                mostra_testo_boss = True
+                                fade_testo_boss = 255
+                                timer_testo_boss = pygame.time.get_ticks()
                                 click_valido = True
 
                             elif btn_ragiona.collidepoint(pos_mouse):
                                 successo = player.ragiona(manager_gioco.boss_attuale)
                                 if successo:
                                     saltata_turno_mostro += 1
+                                    testo_turno_boss = f"{player.nome} ha convinto il mostro a calmarsi!"
+                                    colore_banner_attuale = (39, 174, 96)   # Verde successo
+                                else:
+                                    testo_turno_boss = f"{player.nome} non è stato convincente!"
+                                    colore_banner_attuale = (192, 57, 43)   # Rosso fallimento
+                                
+                                # Attivazione banner comune
+                                mostra_testo_boss = True
+                                fade_testo_boss = 255
+                                timer_testo_boss = pygame.time.get_ticks()
                                 click_valido = True
                                 
                             # Aggiorna turno
@@ -482,7 +602,7 @@ while running:
                                 
                                 # Non azzerare gli HP qui se vuoi che il boss resti visibile mentre appare il banner
                                 boss.hp = 0 
-                                giocatori_fuggiti = [False, False]
+                                #giocatori_fuggiti = [False, False]
                                 player_turn = 1
                             else:
                                 # Attacca solo i giocatori presenti
@@ -499,7 +619,7 @@ while running:
                                     timer_boss_attacco = pygame.time.get_ticks()
 
                                     # --- 2. ATTIVAZIONE TERREMOTO (Screen Shake) ---
-                                    shake_intensity = 10  # Intensità del colpo
+
                                     timer_shake = pygame.time.get_ticks()
 
                                     testo_turno_boss = f"Il mostro attacca e infligge {boss.danno} danni"
@@ -600,7 +720,7 @@ while running:
             screen.blit(txt_in, (LARGHEZZA // 2 - txt_in.get_width() // 2, ALTEZZA - 55))
 
     elif stato_gioco == "SCELTA_MORALITA":
-        font_piccolo = pygame.font.SysFont("Constantia", 18, bold=True)
+       
         draw_text_centered("Che individuo sei davvero? Un eroe altruista, un mercenario egoista o un'anima indifferente?", pygame.Rect(0, ALTEZZA//4, LARGHEZZA, 50), (255, 255, 255), font_piccolo)
         for btn, txt, col in [(btn_eroe, "EROE", (46, 204, 113)), (btn_mercenario, "MERCENARIO", (231, 76, 60)), (btn_indifferente, "NEUTRALE", (149, 165, 166))]:
             pygame.draw.rect(screen, col, btn, border_radius=8)  #Disegna i pulsanti per scegliere la moralità con i relativi colori
@@ -648,8 +768,15 @@ while running:
                 
                 # 1. Memorizziamo quale livello abbiamo appena FINITO
                 livello_appena_finito = gestore_livelli.indice_corrente 
-                
+                # --- CONTROLLO VITTORIA FINALE ---
+                # Se abbiamo appena finito l'ultimo livello (indice 4)
+                if livello_appena_finito == 4:
+                    stato_gioco = "VITTORIA"
+                    alpha_fade = 0 
+                    fase_transizione = None
+                    continue # Salta il resto e vai alla schermata vittoria
                 # 2. Avanziamo all'indice del PROSSIMO livello
+
                 gestore_livelli.indice_corrente += 1 
                 manager_gioco.livello_corrente = gestore_livelli.indice_corrente + 1
                 nuovo_idx = gestore_livelli.indice_corrente 
@@ -732,15 +859,14 @@ while running:
                 offset_shake = [random.randint(-shake_intensity, shake_intensity), 
                                 random.randint(-shake_intensity, shake_intensity)]
             
-            # --- DISEGNO ENTITÀ (Con offset per lo shake) ---
+           # --- DISEGNO ENTITÀ (Con offset per lo shake) ---
             boss_logico = manager_gioco.boss_attuale
             if boss_logico and boss_logico.is_alive() and not mostra_messaggio_livello:
-                # Salviamo la posizione originale, applichiamo lo shake e disegnamo
+                # Disegno Boss (rimane sempre visibile finché è vivo)
                 pos_originale = boss_visual.pos
                 boss_visual.pos = (pos_originale[0] + offset_shake[0], pos_originale[1] + offset_shake[1])
                 boss_visual.disegna(screen, con_ombra=True)
                 
-                # Effetto Sagoma Bianca Boss
                 if boss_attacco_visual:
                     tempo = pygame.time.get_ticks() - timer_boss_attacco
                     if tempo < durata_effetto:
@@ -748,31 +874,39 @@ while running:
                         disegna_flash_sagoma(screen, boss_visual, (255, 255, 200), alpha)
                     else: boss_attacco_visual = False
                 
-                boss_visual.pos = pos_originale # Ripristina posizione
+                if boss_danno_visual:
+                    tempo = pygame.time.get_ticks() - timer_boss_danno
+                    if tempo < durata_effetto:
+                        alpha = 200 - int((tempo / durata_effetto) * 200)
+                        disegna_flash_sagoma(screen, boss_visual, (255, 0, 0), alpha)
+                    else: boss_danno_visual = False
+                boss_visual.pos = pos_originale 
 
-            # --- PERSONAGGIO 1 (Effetto Rosso + Shake) ---
-            pos_orig_p1 = personaggio1.pos
-            personaggio1.pos = (pos_orig_p1[0] + offset_shake[0], pos_orig_p1[1] + offset_shake[1])
-            personaggio1.disegna(screen, con_ombra=True)
-            if p1_danno_visual:
-                tempo = pygame.time.get_ticks() - timer_p1_danno
-                if tempo < durata_effetto:
-                    alpha = 180 - int((tempo / durata_effetto) * 180)
-                    disegna_flash_sagoma(screen, personaggio1, (255, 0, 0), alpha)
-                else: p1_danno_visual = False
-            personaggio1.pos = pos_orig_p1
+            # --- PERSONAGGIO 1 (Scompare se fuggito) ---
+            if not giocatori_fuggiti[0]: # <--- Se fugge, non disegna nulla di P1
+                pos_orig_p1 = personaggio1.pos
+                personaggio1.pos = (pos_orig_p1[0] + offset_shake[0], pos_orig_p1[1] + offset_shake[1])
+                personaggio1.disegna(screen, con_ombra=True)
+                if p1_danno_visual:
+                    tempo = pygame.time.get_ticks() - timer_p1_danno
+                    if tempo < durata_effetto:
+                        alpha = 180 - int((tempo / durata_effetto) * 180)
+                        disegna_flash_sagoma(screen, personaggio1, (255, 0, 0), alpha)
+                    else: p1_danno_visual = False
+                personaggio1.pos = pos_orig_p1
 
-            # --- PERSONAGGIO 2 (Effetto Rosso + Shake) ---
-            pos_orig_p2 = personaggio2.pos
-            personaggio2.pos = (pos_orig_p2[0] + offset_shake[0], pos_orig_p2[1] + offset_shake[1])
-            personaggio2.disegna(screen, con_ombra=True)
-            if p2_danno_visual:
-                tempo = pygame.time.get_ticks() - timer_p2_danno
-                if tempo < durata_effetto:
-                    alpha = 180 - int((tempo / durata_effetto) * 180)
-                    disegna_flash_sagoma(screen, personaggio2, (255, 0, 0), alpha)
-                else: p2_danno_visual = False
-            personaggio2.pos = pos_orig_p2
+            # --- PERSONAGGIO 2 (Scompare se fuggito) ---
+            if len(manager_gioco.giocatori) > 1 and not giocatori_fuggiti[1]: # <--- Se fugge, non disegna nulla di P2
+                pos_orig_p2 = personaggio2.pos
+                personaggio2.pos = (pos_orig_p2[0] + offset_shake[0], pos_orig_p2[1] + offset_shake[1])
+                personaggio2.disegna(screen, con_ombra=True)
+                if p2_danno_visual:
+                    tempo = pygame.time.get_ticks() - timer_p2_danno
+                    if tempo < durata_effetto:
+                        alpha = 180 - int((tempo / durata_effetto) * 180)
+                        disegna_flash_sagoma(screen, personaggio2, (255, 0, 0), alpha)
+                    else: p2_danno_visual = False
+                personaggio2.pos = pos_orig_p2
 
             if mostra_notifica_item:
                 tempo_corrente = pygame.time.get_ticks()
@@ -807,40 +941,14 @@ while running:
             # --- DISEGNO HUD ---
             font_hint = pygame.font.SysFont("Arial", 11, bold=True, italic=True)
             colore_hint = (200, 200, 200)
-            font_piccolo = pygame.font.SysFont("Constantia", 18, bold=True)
+          
             # --- Disegna il turno solo se è finito il secondo di pausa ---
             if pygame.time.get_ticks() - nascondi_turno_timer > 1000:
                 draw_text_centered(testo_turno, pygame.Rect(0, 10, LARGHEZZA, 40), (255, 255, 255), font_piccolo)
 
                         # Testo del boss con fade
                         # --- DISEGNO BANNER NOTIFICA BOSS (Attacco, Fuga, Confusione) ---
-            if mostra_testo_boss:
-                # 1. Creazione della fascia nera semitrasparente
-                altezza_banner = 60
-                y_banner = 50 # Posizione verticale
-                surf_banner = pygame.Surface((LARGHEZZA, altezza_banner), pygame.SRCALPHA)
-                
-                # Usiamo lo stesso fade_testo_boss per far sparire anche il banner
-                bg_alpha = int(fade_testo_boss * 0.9) # 60% dell'opacità attuale
-                surf_banner.fill((0, 0, 0, bg_alpha))
-                screen.blit(surf_banner, (0, y_banner - 10))
-
-                # 2. Rendering del testo (Usa il colore_banner_attuale impostato nella logica)
-                # Se non hai ancora definito colore_banner_attuale, usa (255, 255, 0) di default
-                txt_surf = font_piccolo.render(testo_turno_boss, True, colore_banner_attuale)
-                txt_surf.set_alpha(fade_testo_boss)
-                
-                # Centratura testo nel banner
-                txt_rect = txt_surf.get_rect(center=(LARGHEZZA // 2, y_banner + altezza_banner // 2 - 10))
-                screen.blit(txt_surf, txt_rect)
-
-                # 3. Logica di Fade Out (già presente nel tuo codice)
-                tempo_trascorso = pygame.time.get_ticks() - timer_testo_boss
-                if tempo_trascorso > 1500:  # Aumentato a 1.5 secondi per dare tempo di leggere
-                    fade_testo_boss -= 5
-                    if fade_testo_boss <= 0:
-                        fade_testo_boss = 0
-                        mostra_testo_boss = False
+            
 
 
             # 1. Player 1
@@ -914,7 +1022,34 @@ while running:
                 pygame.draw.rect(screen, col, btn, border_radius=8)
                 draw_text_centered(txt, btn, (255, 255, 255))
 
-            # 2. NON CAPITPO
+            if mostra_testo_boss:
+                # 1. Creazione della fascia nera semitrasparente
+                altezza_banner = 60
+                y_banner = 50 # Posizione verticale
+                surf_banner = pygame.Surface((LARGHEZZA, altezza_banner), pygame.SRCALPHA)
+                
+                # Usiamo lo stesso fade_testo_boss per far sparire anche il banner
+                bg_alpha = int(fade_testo_boss * 0.9) # 60% dell'opacità attuale
+                surf_banner.fill((0, 0, 0, bg_alpha))
+                screen.blit(surf_banner, (0, y_banner - 10))
+
+                # 2. Rendering del testo (Usa il colore_banner_attuale impostato nella logica)
+                # Se non hai ancora definito colore_banner_attuale, usa (255, 255, 0) di default
+                txt_surf = font_piccolo.render(testo_turno_boss, True, colore_banner_attuale)
+                txt_surf.set_alpha(fade_testo_boss)
+                
+                # Centratura testo nel banner
+                txt_rect = txt_surf.get_rect(center=(LARGHEZZA // 2, y_banner + altezza_banner // 2 - 10))
+                screen.blit(txt_surf, txt_rect)
+
+                # 3. Logica di Fade Out (già presente nel tuo codice)
+                tempo_trascorso = pygame.time.get_ticks() - timer_testo_boss
+                if tempo_trascorso > 1500:  # Aumentato a 1.5 secondi per dare tempo di leggere
+                    fade_testo_boss -= 5
+                    if fade_testo_boss <= 0:
+                        fade_testo_boss = 0
+                        mostra_testo_boss = False
+                        
             pygame.draw.rect(screen, (60, 60, 60), rect_btn_p2, border_radius=5)
             draw_text_centered("INV", rect_btn_p2, (255, 215, 0), pygame.font.SysFont("Arial", 10, bold=True))
             if inv_p2_aperto and hud["p2_inv"]:
@@ -938,76 +1073,84 @@ while running:
                 draw_text_centered(testo_passaggio, pygame.Rect(0, ALTEZZA // 2 - 60, LARGHEZZA, 120), (255, 215, 0), font_vittoria)
     
 
-    #4. NPC e animazioni
+    # 4. NPC e animazioni (VERSIONE COOPERATIVA 2 PLAYER - WRAPPING LOGIC)
     elif stato_gioco == "DIALOGO_NPC":
-        # 1. Sfondo del dialogo (sempre scalato correttamente)
         screen.blit(sfondo_dialogo_img, (0, 0))
 
-        # --- 2. DISEGNO NPC ANIMATO DINAMICO ---
         if npc_attivo:
             npc_visual = grafica_npc.get(npc_attivo.nome)
             if npc_visual:
-                # Recuperiamo le dimensioni reali del frame corrente
-                sprite_w = npc_visual.frames[int(npc_visual.index)].get_width()
-                sprite_h = npc_visual.frames[int(npc_visual.index)].get_height()
-
-                if "Guardia" in npc_attivo.nome:
-                    # POSIZIONE GUARDIA:
-                    # X: 5% della larghezza
-                    # Y: Allineata in modo che la testa sia sempre visibile (offset basato su altezza sprite)
-                    npc_visual.pos = [int(LARGHEZZA * 0.05), int(ALTEZZA *0.1 )]
-                else:
-                    # POSIZIONE VECCHIO SAGGIO:
-                    # X: 10% della larghezza
-                    # Y: 20% dell'altezza (essendo più basso della guardia)
-                    npc_visual.pos = [int(LARGHEZZA * 0.1), int(ALTEZZA * 0.2)]
-                
+                npc_visual.pos = [int(LARGHEZZA // 2 - 50), int(ALTEZZA * 0.05)]
                 npc_visual.disegna(screen, con_ombra=True)
 
-        # --- 3. BOX DOMANDA ADATTIVO (INGRANDITO) ---
-        # Aumentiamo box_w (da 0.8 a 0.9) e box_h (da 0.15 a 0.25)
-        box_w = int(LARGHEZZA * 0.9)
-        box_h = int(ALTEZZA * 0.25)
-        box_x = (LARGHEZZA - box_w) // 2
-        # Lo abbassiamo un po' dal bordo superiore (da 0.05 a 0.07) per estetica
-        box_y = int(ALTEZZA * 0.07) 
+        # --- PARAMETRI LAYOUT DINAMICI ---
+        box_w = int(LARGHEZZA * 0.48) 
+        box_h = int(ALTEZZA * 0.22)
+        box_y = int(ALTEZZA * 0.40) 
         
-        box_domanda = pygame.Rect(box_x, box_y, box_w, box_h)
-        box_surf = pygame.Surface(box_domanda.size, pygame.SRCALPHA)
-        box_surf.fill((40, 40, 40, 230)) # Leggermente più opaco (230) per dialoghi lunghi
-        screen.blit(box_surf, box_domanda.topleft)
+        f_domanda = pygame.font.SysFont("Constantia", max(16, int(ALTEZZA * 0.024)), bold=True)
+        f_opzioni = pygame.font.SysFont("Constantia", max(18, int(ALTEZZA * 0.030)), bold=True)
+
+        btn_h = int(ALTEZZA * 0.07) 
+        btn_gap = int(ALTEZZA * 0.01)
+
+        btn_opzioni_p1.clear()
+        btn_opzioni_p2.clear()
+
+        # --- 3. LATO PLAYER 1 (SINISTRA) ---
+        x_p1 = int(LARGHEZZA * 0.01) 
+        rect_p1 = pygame.Rect(x_p1, box_y, box_w, box_h)
         
-        # Bordo un po' più spesso (3 invece di 2) per sostenerne la grandezza
-        pygame.draw.rect(screen, (255, 215, 0), box_domanda, 3, border_radius=15)
+        if not risposta_p1_data:
+            # Sfondo e Bordo
+            s_p1 = pygame.Surface(rect_p1.size, pygame.SRCALPHA)
+            s_p1.fill((20, 40, 70, 210)) 
+            screen.blit(s_p1, rect_p1.topleft)
+            val = abs(int(math.sin(pygame.time.get_ticks() * 0.005) * 50))
+            pygame.draw.rect(screen, (0, 150 + val, 255), rect_p1, 3, border_radius=12)
+            
+            # --- TESTO PULITO (Senza nome NPC) ---
+            # Mostriamo "NomePlayer: Domanda (andando a capo)"
+            testo_da_disegnare = f"{manager_gioco.giocatori[0].nome}: {npc_attivo.domanda}"
+            draw_text_wrapped(screen, testo_da_disegnare, rect_p1, (255, 255, 255), f_domanda)
 
-        # --- 4. FONT DINAMICI ---
-        # Aumentiamo leggermente anche la dimensione del font per riempire il box nuovo
-        size_domanda = max(22, int(ALTEZZA * 0.015)) 
-        size_opzioni = max(18, int(ALTEZZA * 0.038))
+            for i, opz in enumerate(npc_attivo.opzioni):
+                btn_y = rect_p1.bottom + 10 + (i * (btn_h + btn_gap))
+                btn = pygame.Rect(x_p1, btn_y, box_w, btn_h)
+                btn_opzioni_p1.append(btn)
+                col = (70, 90, 140) if btn.collidepoint(pos_mouse) else (40, 50, 80)
+                pygame.draw.rect(screen, col, btn, border_radius=6)
+                draw_text_centered(opz.testo, btn, (220, 240, 255), f_opzioni)
+        else:
+            pygame.draw.rect(screen, (10, 30, 10, 180), rect_p1, border_radius=12)
+            draw_text_centered("SCELTA CONFERMATA ✓", rect_p1, (0, 255, 150), f_domanda)
+
+        # --- 4. LATO PLAYER 2 (DESTRA) ---
+        x_p2 = int(LARGHEZZA * 0.51) 
+        rect_p2 = pygame.Rect(x_p2, box_y, box_w, box_h)
         
-        font_domanda = pygame.font.SysFont("Constantia", size_domanda, bold=True)
-        f_npc = pygame.font.SysFont("Constantia", size_opzioni)
+        if len(manager_gioco.giocatori) > 1:
+            if not risposta_p2_data:
+                s_p2 = pygame.Surface(rect_p2.size, pygame.SRCALPHA)
+                s_p2.fill((70, 30, 30, 210)) 
+                screen.blit(s_p2, rect_p2.topleft)
+                val = abs(int(math.sin(pygame.time.get_ticks() * 0.005) * 50))
+                pygame.draw.rect(screen, (255, 100 + val, 0), rect_p2, 3, border_radius=12)
 
-        testo = f"{npc_attivo.nome}: {npc_attivo.domanda}"
-        draw_text_centered(testo, box_domanda, (255, 255, 255), font_domanda)
+                # --- TESTO PULITO P2 ---
+                testo_da_disegnare_p2 = f"{manager_gioco.giocatori[1].nome}: {npc_attivo.domanda}"
+                draw_text_wrapped(screen, testo_da_disegnare_p2, rect_p2, (255, 255, 255), f_domanda)
 
-        # --- 5. OPZIONI (PULSANTI) DINAMICHE ---
-        btn_opzioni_npc.clear()
-        padding = int(ALTEZZA * 0.02)
-        btn_h = int(ALTEZZA * 0.08)
-        btn_w = int(LARGHEZZA * 0.5)
-        # Le opzioni partono dal 55% dell'altezza per non coprire l'NPC
-        start_y = int(ALTEZZA * 0.55)
-
-        for i, opzione in enumerate(npc_attivo.opzioni):
-            rect = pygame.Rect((LARGHEZZA - btn_w) // 2, start_y + i * (btn_h + padding), btn_w, btn_h)
-            btn_opzioni_npc.append(rect)
-
-            colore = (100, 100, 100) if rect.collidepoint(pos_mouse) else (60, 60, 60)
-            pygame.draw.rect(screen, colore, rect, border_radius=8)
-            pygame.draw.rect(screen, (255, 215, 0), rect, 2, border_radius=8)
-
-            draw_text_centered(opzione.testo, rect, (255, 255, 255), f_npc)
+                for i, opz in enumerate(npc_attivo.opzioni):
+                    btn_y = rect_p2.bottom + 10 + (i * (btn_h + btn_gap))
+                    btn = pygame.Rect(x_p2, btn_y, box_w, btn_h)
+                    btn_opzioni_p2.append(btn)
+                    col = (140, 70, 70) if btn.collidepoint(pos_mouse) else (80, 40, 40)
+                    pygame.draw.rect(screen, col, btn, border_radius=6)
+                    draw_text_centered(opz.testo, btn, (255, 230, 220), f_opzioni)
+            else:
+                pygame.draw.rect(screen, (30, 10, 10, 180), rect_p2, border_radius=12)
+                draw_text_centered("SCELTA CONFERMATA ✓", rect_p2, (255, 150, 0), f_domanda)
 
 
     elif stato_gioco == "VITTORIA":
@@ -1049,19 +1192,14 @@ while running:
     # --- SCHERMATA GAME OVER ---
     elif stato_gioco == "GAME_OVER":
         screen.fill((20, 0, 0))
-
         h = ALTEZZA
         w = LARGHEZZA
-
         main_size = int(h * 0.09)
         sub_size = int(h * 0.04)
-
         font_main = pygame.font.SysFont("Constantia", main_size, bold=True)
         font_sub = pygame.font.SysFont("Constantia", sub_size, italic=True)
-
         y_main = int(h * 0.45)
         y_hint = int(h * 0.90)
-
         draw_text_centered("HAI FALLITO LA MISSIONE",pygame.Rect(0, y_main, w, main_size), (200, 0, 0), font_main)
         draw_text_centered("Premi ESC per tornare al menu", pygame.Rect(0, y_hint, w, sub_size),(100, 100, 100),font_sub)
 

@@ -65,15 +65,22 @@ class Inventory(Iterable, Subject):
     def add_item(self, item: Item):
         self._items.append(item)
 
+    def remove_item(self, item: Item): # <--- AGGIUNGI QUESTO METODO
+        if item in self._items:
+            self._items.remove(item)
+            self.notify()
+            return True
+        return False
+    
     def __iter__(self) -> InventoryIterator:
         return InventoryIterator(self._items)
     
     def __len__(self):
         return len(self._items)
     
-    '''def clear(self):
-        self._items.clear()
-        self.notify()  # se vuoi notificare la GUI'''
+    # Aggiungiamo questo per far funzionare 'if oggetto in self._inventario'
+    def __contains__(self, item):
+        return item in self._items
 
     def __repr__(self):
         if not self._items: return "Vuoto"
@@ -152,6 +159,22 @@ class Player(Subject, ABC):
         self._inventario = Inventory()
         self._armatura: Armatura | None = None  #riferimento all'armatura equipaggiata
         self.abilita= {"danno":0,"furtivita":0,"intelligenza":0}
+    def usa_pozione(self, pozione):
+        # Supponendo che la pozione abbia un attributo 'valore' per la cura
+        cura = getattr(pozione, 'valore', 20) 
+        self.hp = min(self.max_hp, self.hp + cura)
+        print(f"Log: {self.nome} si è curato di {cura} HP. HP attuali: {self.hp}")
+        self.notify() # Notifica la barra della vita grafica di aggiornarsi
+    
+    def remove_item(self, oggetto):
+        """Rimuove un oggetto dall'inventario chiamando il metodo della classe Inventory."""
+        # Chiamiamo il metodo remove_item della classe Inventory
+        successo = self._inventario.remove_item(oggetto)
+        if successo:
+            print(f"Log: {oggetto.nome} rimosso dall'inventario di {self.nome}.")
+            self.notify() # Aggiorna la barra o l'HUD se necessario
+        else:
+            print(f"Log: Errore - {oggetto.nome} non trovato.")
 
     @property
     def moralita(self) -> int: return self._moralita
@@ -201,6 +224,9 @@ class Player(Subject, ABC):
     def max_hp(self) -> int: return self._max_hp
 
     def take_damage(self, amount: int):
+        if self._armatura is not None:
+            print(f"log: {self.nome} ha un'armatura che riduce il danno.")
+            amount=self._armatura.difendi(amount)
         # 1. Sottrai il danno
         self.hp -= amount
         print(f"Log: {self.nome} ha subito {amount} danni. HP rimanenti: {self.hp}")
@@ -223,7 +249,7 @@ class Player(Subject, ABC):
 
         # 3. NOTIFICA LA GUI (Questo fa muovere la barra e i cuori in tempo reale)
         self.notify()
-
+        return amount
     def heal(self, amount: int):
         self.hp += amount
 
