@@ -944,7 +944,7 @@ while running:
                 frame = boss_visual.frames[0]
                 larg_boss, alt_boss = frame.get_width(), frame.get_height()
                 # Dimensioni barra
-                w_b, h_b = 140, 12
+                w_b, h_b = 180, 18
                 off_y = 10
                 # Posizione predefinita della barra sopra la testa
                 bx = boss_x + (larg_boss // 2) - (w_b // 2)
@@ -952,15 +952,21 @@ while running:
 
                 # Barra predefinita sopra la testa
                 if nome == "goblin":
-                    # bx centrato rispetto al boss, poi piccolo aggiustamento
-                    bx = boss_visual.pos[0] + (larg_boss // 2) - (w_b // 2) - 100  
-                    by = boss_visual.pos[1] + alt_boss - 430  # sotto il corpo del Goblin
+                    bx = boss_x + (larg_boss // 2) - (w_b // 2) - int(larg_boss * 0.15)  # spostamento laterale
+                    by = boss_y + int(alt_boss * 0.35)
                 elif nome == "serpente a tre teste":
-                    bx = boss_visual.pos[0] + (larg_boss // 2) - (w_b // 2) + 60
-                    by = boss_visual.pos[1] + alt_boss - 300
+                    bx = boss_x + (larg_boss // 2) - (w_b // 2) + int(larg_boss * 0.15)
+                    by = boss_y + int(alt_boss * 0.20)
                 elif nome == "yeti delle nevi":
-                    bx = boss_visual.pos[0] + (larg_boss // 2) - (w_b // 2)
-                    by = boss_visual.pos[1] + alt_boss - 350
+                    bx = boss_x + (larg_boss // 2) - (w_b // 2)
+                    by = boss_y + int(alt_boss * 0.10)
+                elif nome == "anubi":
+                    bx = boss_x + (larg_boss // 2) - (w_b // 2)
+                    by = boss_y + int(alt_boss * 0.05)  
+                    
+                    # Clamp verticale
+                    by = max(0, min(by, ALTEZZA - h_b))
+
 
                 # Aggiorna la HUD
                 hud["boss_health"].rect.update(bx, by, w_b, h_b)
@@ -1035,8 +1041,26 @@ while running:
         if npc_attivo:
             npc_visual = grafica_npc.get(npc_attivo.nome)
             if npc_visual:
-                npc_visual.pos = [int(LARGHEZZA // 2 - 50), int(ALTEZZA * 0.05)]
+                
+                if npc_attivo.nome.lower() == "guardiaoscura":
+                    npc_x = int(LARGHEZZA * 0.5)  
+                    npc_y = int(ALTEZZA * 0.40)   
+                elif npc_attivo.nome.lower() == "vecchiosaggio":
+                    npc_x = int(LARGHEZZA * 0.5)  
+                    npc_y = int(ALTEZZA * 0.50)   
+                else:
+                    npc_x = int(LARGHEZZA // 2 - 50)
+                    npc_y = int(ALTEZZA * 0.05)
+
+                # Centra rispetto allo sprite
+                sprite_w = npc_visual.frames[0].get_width()
+                sprite_h = npc_visual.frames[0].get_height()
+                npc_x -= int(sprite_w // 2)
+                npc_y -= int(sprite_h // 2)
+
+                npc_visual.pos = [npc_x, npc_y]
                 npc_visual.disegna(screen, con_ombra=True)
+
 
         # parametri layout
         box_w = int(LARGHEZZA * 0.48) 
