@@ -1,54 +1,54 @@
 {
-    "livello_corrente": 4,
+    "livello_corrente": 5,
     "vite_rimanenti": 6,
-    "npc_in_corso": true,
+    "npc_in_corso": false,
     "giocatori": [
         {
             "type": "Player1",
-            "nome": "giu",
-            "moralita": 3,
-            "hp": 90,
+            "nome": "ale",
+            "moralita": 10,
+            "hp": 95,
             "max_hp": 100,
             "abilita": {
-                "danno": 0,
-                "furtivita": 0,
-                "intelligenza": 0
+                "danno": 4,
+                "furtivita": 1,
+                "intelligenza": 2
             },
             "inventario": [
-                "HeavySniper",
-                "PozioneCura",
-                "ArmaturaPiuElevata"
+                "Pugnale",
+                "KitPozioniFinale",
+                "ArmaturaElevata"
             ]
         },
         {
             "type": "Player2",
-            "nome": "a",
-            "moralita": 3,
-            "hp": 90,
+            "nome": "giu",
+            "moralita": 1,
+            "hp": 95,
             "max_hp": 100,
             "abilita": {
-                "danno": 0,
-                "furtivita": 0,
-                "intelligenza": 0
+                "danno": 5,
+                "furtivita": 1,
+                "intelligenza": 1
             },
             "inventario": [
-                "HeavySniper",
-                "PozioneCura",
-                "ArmaturaPiuElevata"
+                "Pugnale",
+                "KitPozioniFinale",
+                "ArmaturaElevata"
             ]
         }
     ],
     "mostri": {
-        "type": "Yeti",
-        "nome": "Yeti delle Nevi",
-        "hp": 140,
-        "max_hp": 140,
-        "danno": 30,
-        "furtivita": 7,
-        "intelligenza": 5,
+        "type": "SerpenteTreTeste",
+        "nome": "Serpente a Tre Teste",
+        "hp": 200,
+        "max_hp": 200,
+        "danno": 70,
+        "furtivita": 10,
+        "intelligenza": 10,
         "pos": [
-            190,
-            90
+            150,
+            120
         ]
     }
 }

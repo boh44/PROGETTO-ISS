@@ -1107,26 +1107,65 @@ while running:
 
 
     elif stato_gioco == "VITTORIA":
-        screen.fill((10, 10, 20))
+        screen.fill((5, 5, 15)) # Sfondo blu notte molto profondo
 
+        totale_moralita = sum(p.moralita for p in manager_gioco.giocatori)
+        punti_moralita = totale_moralita // len(manager_gioco.giocatori) if manager_gioco.giocatori else 5
+
+      
+      
         h = ALTEZZA
         w = LARGHEZZA
-
         titolo_size = int(h * 0.08)
-        sub_size = int(h * 0.06)
+        sub_size = int(h * 0.045)
         hint_size = int(h * 0.035)
 
         font_titolo = pygame.font.SysFont("Constantia", titolo_size, bold=True)
+        font_descr = pygame.font.SysFont("Constantia", sub_size, italic=True)
         font_bottoni = pygame.font.SysFont("Constantia", hint_size)
 
-        y_titolo = int(h * 0.45)
+        # LOGICA DEI 3 FINALI
+        if punti_moralita >= 8:
+            # FINALE EROICO
+            titolo = "L'ASCENSIONE DEI PALADINI"
+            colore_titolo = (255, 215, 0)  # Oro
+            messaggio = "La vostra luce ha purificato il mondo. Regnerà la pace."
+            colore_sub = (180, 255, 180)    # Verde luce
+        
+        elif punti_moralita >= 4:
+            # FINALE GRIGIO
+            titolo = "I SOPRAVVISSUTI DEL CREPUSCOLO"
+            colore_titolo = (200, 200, 220) # Argento
+            messaggio = "Il male è vinto, ma l'oscurità ha lasciato cicatrici profonde."
+            colore_sub = (170, 170, 170)    # Grigio
+            
+        else:
+            # FINALE OSCURO
+            titolo = "I NUOVI SIGNORI OSCURI"
+            colore_titolo = (200, 0, 0)     # Rosso sangue
+            messaggio = "Avete abbattuto un mostro solo per prenderne il posto sul trono."
+            colore_sub = (150, 50, 50)      # Rosso cupo
+
+        # --- 4. RENDERING GRAFICO ---
+        y_titolo = int(h * 0.40)
         y_sub = int(h * 0.55)
+        y_moralita = int(h * 0.70)
         y_hint = int(h * 0.90)
 
-        draw_text_centered("IL MALE È STATO ABBATTUTO", pygame.Rect(2, y_titolo + 2, w, titolo_size), (50, 50, 50), font_titolo)
-        draw_text_centered("IL MALE È STATO ABBATTUTO",pygame.Rect(0, y_titolo, w, titolo_size),(255, 255, 255),font_titolo)
-        draw_text_centered("FINALMENTE SEI LIBERO!",pygame.Rect(0, y_sub, w, sub_size),(0, 255, 150),font_titolo)
-        draw_text_centered("Premi ESC per tornare al menu",pygame.Rect(0, y_hint, w, hint_size),(100, 100, 100),font_bottoni)
+        # Effetto ombra per il titolo
+        draw_text_centered(titolo, pygame.Rect(3, y_titolo + 3, w, titolo_size), (0, 0, 0), font_titolo)
+        # Titolo principale
+        draw_text_centered(titolo, pygame.Rect(0, y_titolo, w, titolo_size), colore_titolo, font_titolo)
+        # Messaggio narrativo
+        draw_text_centered(messaggio, pygame.Rect(0, y_sub, w, sub_size), colore_sub, font_descr)
+        
+        # Visualizzazione grado moralità
+        testo_grado = f"PUREZZA DELL'ANIMA: {punti_moralita}/10"
+        draw_text_centered(testo_grado, pygame.Rect(0, y_moralita, w, hint_size), (100, 100, 150), font_bottoni)
+
+        # Istruzione per uscire
+        draw_text_centered("Premi ESC per tornare al menu", pygame.Rect(0, y_hint, w, hint_size), (80, 80, 80), font_bottoni)
+
 
     # 7. Gestione Fade e Transizioni
     if alpha_fade > 0:
