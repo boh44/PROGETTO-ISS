@@ -5,10 +5,8 @@ import json
 import os
 from collections.abc import Iterable, Iterator
 
-# ==========================================
-# INTERFACCE OBSERVER
-# ==========================================
 
+# INTERFACCE OBSERVER
 class Observer(ABC):
     @abstractmethod
     def update(self, subject: "Subject") -> None:
@@ -30,9 +28,8 @@ class Subject(ABC):
         for observer in self._observers:
             observer.update(self)
 
-# ==========================================
+
 # INVENTORY + ITERATOR
-# ==========================================
 
 class Item:
     def __init__(self, nome: str, tipo: str, valore: int, oggetto=None):
@@ -65,7 +62,7 @@ class Inventory(Iterable, Subject):
     def add_item(self, item: Item):
         self._items.append(item)
 
-    def remove_item(self, item: Item): # <--- AGGIUNGI QUESTO METODO
+    def remove_item(self, item: Item): 
         if item in self._items:
             self._items.remove(item)
             self.notify()
@@ -78,17 +75,15 @@ class Inventory(Iterable, Subject):
     def __len__(self):
         return len(self._items)
     
-    # Aggiungiamo questo per far funzionare 'if oggetto in self._inventario'
-    def __contains__(self, item):
+    def __contains__(self, item): #per l'inventario
         return item in self._items
 
     def __repr__(self):
         if not self._items: return "Vuoto"
         return ", ".join([item.nome for item in self._items])
 
-# ==========================================
+
 # MEMENTO
-# ==========================================
 
 class CharacterMemento:
     def __init__(self, state: Dict[str, Any]):
@@ -104,7 +99,7 @@ class MostroMemento:
     def get_state(self) -> Dict[str, Any]:
         return self._state
 
-
+#Observer
 class AutoSaveObserver(Observer):
     def update(self, subject):
         manager = GameManager.get_instance()
@@ -145,9 +140,7 @@ class AutoSaveObserver(Observer):
         except Exception as e:
             print(f"Errore critico durante il salvataggio: {e}")
 
-# ==========================================
 # PLAYER
-# ==========================================
 
 class Player(Subject, ABC):
     def __init__(self, nome: str, moralita: int):
@@ -175,7 +168,7 @@ class Player(Subject, ABC):
             self.notify() # Aggiorna la barra o l'HUD se necessario
         else:
             print(f"Log: Errore - {oggetto.nome} non trovato.")
-
+    #moralità
     @property
     def moralita(self) -> int: return self._moralita
 
@@ -185,7 +178,7 @@ class Player(Subject, ABC):
             self._moralita = max(0, min(valore,10))
             self.notify()
     
-    # --- DANNO ---
+    #danno
     @property
     def danno(self) -> int: return self.abilita["danno"]
 
@@ -194,7 +187,7 @@ class Player(Subject, ABC):
         self.abilita["danno"] = max(0, min(valore, 10))
         self.notify()
 
-    # --- FURTIVITÀ ---
+    #furtività
     @property
     def furtivita(self) -> int: return self.abilita["furtivita"]
 
@@ -203,7 +196,7 @@ class Player(Subject, ABC):
         self.abilita["furtivita"] = max(0, min(valore, 10))
         self.notify()
 
-    # --- INTELLIGENZA ---
+    #intelligenza
     @property
     def intelligenza(self) -> int: return self.abilita["intelligenza"]
 
@@ -227,11 +220,11 @@ class Player(Subject, ABC):
         if self._armatura is not None:
             print(f"log: {self.nome} ha un'armatura che riduce il danno.")
             amount=self._armatura.difendi(amount)
-        # 1. Sottrai il danno
+        # Sottrai il danno
         self.hp -= amount
         print(f"Log: {self.nome} ha subito {amount} danni. HP rimanenti: {self.hp}")
 
-        # 2. Controllo se gli HP sono finiti
+       
         if self.hp <= 0:
             manager = GameManager.get_instance()
             
@@ -247,7 +240,7 @@ class Player(Subject, ABC):
                 self.hp = 0
                 print("Log: Nessuna vita rimasta!")
 
-        # 3. NOTIFICA LA GUI (Questo fa muovere la barra e i cuori in tempo reale)
+        # NOTIFICA LA GUI (fa muovere la barra e i cuori in tempo reale)
         self.notify()
         return amount
     def heal(self, amount: int):
@@ -257,12 +250,12 @@ class Player(Subject, ABC):
         self._armatura = armatura
 
     def add_item(self, item: Item):
-        self._inventario.add_item(item)  # aggiungi oggetto
+        self._inventario.add_item(item)  
         self.notify()
 
     def attacca(self, mostro, arma: Arma) -> int:
         if arma is None: danno_arma = 0
-        else: danno_arma = getattr(arma, "danno", 0)    #“Se l’oggetto ha questo attributo, usalo. Se NON ce l’ha, usa il valore di default, 0.”
+        else: danno_arma = getattr(arma, "danno", 0)    #Se l’oggetto ha questo attributo, usalo. Se NON ce l’ha, usa il valore di default, 0.
         danno_totale = self.abilita["danno"] + danno_arma
         print(f"{self.nome} attacca {mostro.nome} per {danno_totale} danni")
         mostro.take_damage(danno_totale)
@@ -295,7 +288,7 @@ class Player(Subject, ABC):
             return False
 
 
-    # ---------- MEMENTO  ----------
+    # MEMENTO
     def save_state(self) -> CharacterMemento:
         nomi_item = [item.nome for item in self._inventario]
         return CharacterMemento({
@@ -351,9 +344,9 @@ class Player1(Player):
 class Player2(Player):
     def __repr__(self): return f"Player2({self.nome}, HP={self.hp})"
 
-# ==========================================
+
 # FACTORY METHOD PLAYER
-# ==========================================
+
 
 class CharacterCreator(ABC):
     @abstractmethod
@@ -366,9 +359,8 @@ class Player1Creator(CharacterCreator):
 class Player2Creator(CharacterCreator):
     def factory_method(self, nome: str, moralita: int) -> Player2: return Player2(nome, moralita)
 
-# ==========================================
+
 # MOSTRI
-# ==========================================
 
 class Mostro(Subject, ABC):
     def __init__(self, nome: str, hp: int, danno: int, furtivita: int, intelligenza: int, x=0, y=0):
@@ -391,7 +383,6 @@ class Mostro(Subject, ABC):
     def max_hp(self) -> int:
         return self._max_hp
     
-    # Se vuoi poter modificare il tetto massimo durante il gioco, aggiungi questo:
     @max_hp.setter
     def max_hp(self, valore: int):
         self._max_hp = valore
@@ -434,7 +425,7 @@ class Mostro(Subject, ABC):
 
 
 
-# ---------- CONCRETE PRODUCTS ----------
+# CONCRETE PRODUCTS MOSTRI
 
 class Goblin(Mostro):
     def __init__(self, x=0, y=0):
@@ -485,10 +476,10 @@ class SerpenteTreTeste(Mostro):
     def attacca(self, player) -> None:
         print(f"{self.nome} attacca {player.nome} per {self.danno} danni")
         player.take_damage(self.danno)
-        self.notify()  # <-- questo farà partire AutoSave
+        self.notify()  
 
 
-# ---------- CREATOR ----------
+#CREATOR
 class MostroCreator(ABC):
     @abstractmethod
     def factory_method(self) -> Mostro:
@@ -497,7 +488,7 @@ class MostroCreator(ABC):
     def crea_mostro(self) -> Mostro:
         return self.factory_method()
 
-# ---------- CONCRETE CREATORS ----------
+#CONCRETE CREATORS 
 class GoblinCreator(MostroCreator):
     def factory_method(self) -> Mostro:
         return Goblin()
@@ -518,9 +509,9 @@ class SerpenteTreTesteCreator(MostroCreator):
     def factory_method(self) -> Mostro:
         return SerpenteTreTeste()
     
-# ==========================================
+
 # GAMEMANAGER (SINGLETON)
-# ==========================================
+
 class GameManager:
     _instance = None
     def __init__(self):
@@ -542,9 +533,8 @@ class GameManager:
         self.npc_in_corso = False
         print("Log: Dati di gioco resettati.")
 
-# ==========================================
+
 # FACADE
-# ==========================================
 
 class GameFacade:
     def __init__(self, manager: GameManager, auto_saver: AutoSaveObserver | None = None):
@@ -570,16 +560,16 @@ class GameFacade:
             with open("salvataggio_gioco.json", "r") as f:
                 contenuto = json.load(f)
 
-            # 1. DATI GLOBALI
+            
             if isinstance(contenuto, dict):
                 self.manager.livello_corrente = contenuto.get("livello_corrente", 1)
                 self.manager.vite_rimanenti = contenuto.get("vite_rimanenti", 6)
                 self.manager.npc_in_corso = contenuto.get("npc_in_corso", False)
                 lista_giocatori = contenuto.get("giocatori", [])
-                # Usiamo la chiave "mostri" come hai specificato tu
+                
                 dati_salvatore_mostro = contenuto.get("mostri") 
             else:
-                # Gestione vecchio formato (solo lista giocatori)
+             
                 lista_giocatori = contenuto
                 self.manager.livello_corrente = 1
                 self.manager.vite_rimanenti = 6
@@ -604,11 +594,7 @@ class GameFacade:
                 
                 if ClasseBoss:
                     pos = dati_salvatore_mostro.get("pos", [0, 0])
-                    # 1. Creiamo il boss (il costruttore metterà HP al massimo)
                     nuovo_boss = ClasseBoss(x=pos[0], y=pos[1])
-                    
-                    # 2. SOVRASCRIVIAMO GLI HP con quelli del salvataggio
-                    # Usiamo getattr per sicurezza
                     hp_salvati = dati_salvatore_mostro.get("hp")
                     max_hp_salvato = dati_salvatore_mostro.get("max_hp")
 
@@ -630,9 +616,8 @@ class GameFacade:
         return os.path.exists("salvataggio_gioco.json")
 
 
-# ==========================================
+
 # ABSTRACT FACTORY ITEM
-# ==========================================
 
 class Arma(ABC):
     @abstractmethod
@@ -646,7 +631,7 @@ class Armatura(ABC):
     @abstractmethod
     def difendi(self, danno: int) -> int: pass
 
-# ---------- ARMI CONCRETE ----------
+#ARMI CONCRETE 
 class SpadaBase(Arma):
     def __init__(self): self.danno = 6
     def attacca(self, mostro) -> int:
@@ -677,7 +662,7 @@ class Pugnale(Arma):
         mostro.take_damage(self.danno)
         return self.danno
 
-# ---------- POZIONI ----------
+# POZIONI 
 class PozioneCura(Pozione):
     def __init__(self): self.cura = 15
     def usa(self, player): player.heal(self.cura); return self.cura
@@ -686,7 +671,7 @@ class KitPozioniFinale(Pozione):
     def __init__(self): self.cura = 50
     def usa(self, player): player.heal(self.cura); return self.cura
 
-# ---------- ARMATURE ----------
+# ARMATURE
 class ArmaturaBase(Armatura):
     def difendi(self, danno: int) -> int: return int(danno * 0.95)
 class ArmaturaElevata(Armatura):
@@ -694,7 +679,7 @@ class ArmaturaElevata(Armatura):
 class ArmaturaPiuElevata(Armatura):
     def difendi(self, danno: int) -> int: return int(danno * 0.07)
 
-# ---------- ABSTRACT FACTORY ----------
+#ABSTRACT FACTORY
 class ItemFactory(ABC):
     @abstractmethod
     def create_arma(self) -> Arma: pass
@@ -703,7 +688,7 @@ class ItemFactory(ABC):
     @abstractmethod
     def create_armatura(self): pass
 
-# ---------- FACTORY LIVELLI ----------
+#FACTORY LIVELLI
 class Livello1Item(ItemFactory):
     def create_arma(self) -> Arma: return SpadaBase()
     def create_pozione(self): return None
@@ -730,9 +715,9 @@ class Livello5Item(ItemFactory):
     def create_armatura(self): return ArmaturaElevata()
 
 
-# ==========================================
+# 
 # FUNZIONI SUPPORTO
-# ==========================================
+# 
 
 def valida_nome(nome: str, player_id: int) -> str:
     nome = nome.strip()
@@ -757,9 +742,8 @@ def assegna_moralita(player: Player, scelta: str = None):
     
     print(f"Log: Statistiche assegnate per {scelta}: Danno {player.danno}") # Debug
 
-# ==========================================
+
 # NPC SYSTEM
-# ==========================================
 
 class SceltaDialogo:
     """Rappresenta una singola opzione di risposta."""
@@ -790,7 +774,7 @@ class NPC(ABC):
             return True
         return False
 
-# ---------- NPC CONCRETI ----------
+#NPC CONCRETI 
 
 class VecchioSaggio(NPC):
     def __init__(self):
