@@ -11,11 +11,8 @@ screen = pygame.display.set_mode((LARGHEZZA, ALTEZZA), pygame.RESIZABLE)
 pygame.display.set_caption("Beyond the Screen")
 clock = pygame.time.Clock()
 alpha_fade = 0  # Gestisce la trasparenza del velo nero
-fase_transizione = None # Può essere "IN" o "OUT"
+fase_transizione = None 
 colore_transizione = (0, 0, 0) # Default nero
-
-# Dizionario per tenere i valori precedenti (opzionale)
-player_stats_cache = {}
 
 def disegna_pannello_stats(surface, player, x, y):
     
@@ -45,8 +42,6 @@ def disegna_pannello_stats(surface, player, x, y):
         txt_surf = font_s.render(testo, True, colore)
         surface.blit(txt_surf, (x + 10, y + 35 + (i * 18)))
 
-
-# --- 1. CLASSI UTILITY (UI) ---
 class ToggleSelector:
     """Selettore per le impostazioni (Stile Tkinter)"""
     def __init__(self, rect, titolo, opzioni, indice_iniziale=0, callback=None):
@@ -106,7 +101,7 @@ class InventoryUI:
         self.categorie = ["Attacco", "Cura", "Utility"]
 
     def disegna(self, surface, categoria_attiva):
-        # Spostiamo tutto l'inventario 40 pixel più in basso rispetto alla barra vita
+        # Sposto tutto l'inventario 40 pixel più in basso rispetto alla barra vita
         y_offset = self.y + 40 
         
         # 1. Box Sfondo (190px larghezza)
@@ -120,7 +115,6 @@ class InventoryUI:
             txt_cat = self.font_cat.render(cat.upper(), True, colore)
             surface.blit(txt_cat, (self.x + (i * 60), y_offset + 10))
 
-        # 3. Disegna gli oggetti (SPADA E POZIONE)
         # Filtriamo l'inventario del player
         oggetti_filtrati = [item for item in self.player._inventario if item.tipo.lower() == categoria_attiva.lower()]
         
@@ -148,10 +142,9 @@ class InventoryUI:
         oggetti = [
             (arma, "Attacco"), 
             (pozione, "Cura"), 
-            (armatura, "Utility")  # <--- MODIFICATO DA "Armatura" A "Utility"
+            (armatura, "Utility")  
         ]
         
-        # ... resto del ciclo for rimane identico ...
         for obj, tipo_default in oggetti:
             if obj is not None:
                 if isinstance(obj, Item):
@@ -162,7 +155,7 @@ class InventoryUI:
                     if hasattr(obj, "danno"): valore = obj.danno
                     elif hasattr(obj, "cura"): valore = obj.cura
                     
-                    # Ora tipo_default sarà "Utility" per l'armatura
+                    
                     nuovo_item = Item(
                         nome=nome_classe, 
                         tipo=tipo_default, 
@@ -203,7 +196,7 @@ class HealthBar(Observer):
         current_width = int(self.rect.width * ratio)
         rect_hp = pygame.Rect(self.rect.x, self.rect.y, current_width, self.rect.height)
         
-        # Colore barra (Verde o Rosso)
+        # Colore barra 
         colore_barra = (39, 174, 96) if ratio > 0.3 else (192, 57, 43)
         pygame.draw.rect(surface, colore_barra, rect_hp) 
 
@@ -325,7 +318,7 @@ class AnimatedSprite:
         # 4. Disegna lo sprite
         surface.blit(frame_attuale, self.pos)
 
-# --- 2. ASSET E RISORSE ---
+#2. ASSET E RISORSE
 def carica_asset(path, colore_fallback):
     try:
         return pygame.image.load(path).convert()
@@ -353,7 +346,7 @@ font_bottoni = pygame.font.SysFont("Constantia", 25, bold=True)
 font_titolo = pygame.font.SysFont("Constantia", 50, bold=True)
 
 
-# --- 3. VARIABILI UI GLOBALI ---
+# 3. VARIABILI UI GLOBALI 
 larghezza_btn, altezza_btn = 200, 45
 btn_start = pygame.Rect(0, 0, larghezza_btn, altezza_btn)
 btn_settings = pygame.Rect(0, 0, larghezza_btn, altezza_btn)
@@ -373,7 +366,6 @@ toggle_schermo = None
 
 
 # HUD (Barra Vita)
-# Sostituisci le variabili singole con questo dizionario
 hud = {
     "p1_health": None,
     "p1_inv": None,
@@ -381,14 +373,11 @@ hud = {
     "p2_inv": None
 }
 
-# Sotto la definizione di hud (riga 135 circa)
 hud_config = {
     "show_inventory": False,
     "categoria_selezionata": "Attacco" # Default
 }
 
-# --- 3. VARIABILI UI GLOBALI ---
-# (Sotto gli altri bottoni esistenti)
 
 # Il bottone centrale per le categorie
 btn_zaino = pygame.Rect(LARGHEZZA // 2 - 50, 20, 100, 35)
@@ -410,7 +399,7 @@ idx_cat_p1 = 0
 idx_cat_p2 = 0
 
 # Variabile globale per alternanza giocatori
-player_turn = 1  # 1 = P1, 2 = P2
+player_turn = 1 
 
 
 def sincronizza_hud():
@@ -513,7 +502,7 @@ def aggiorna_posizioni_e_scale(w, h,indice_livello=0):
     if hud["p2_health"]:
         hud["p2_health"].rect = pygame.Rect(w - 220, 20, 200, 25)
 
-    # --- AGGIUNTA: Bottoni di Combattimento Dinamici ---
+    #bottoni di combattimento dinamici
     # Definiamo dimensioni proporzionali o fisse
     w_b, h_b = 200, 50
     spazio = 20
@@ -525,7 +514,7 @@ def aggiorna_posizioni_e_scale(w, h,indice_livello=0):
     btn_fuggi.update(centro_x - (w_b // 2), y_pos, w_b, h_b)
     btn_ragiona.update(centro_x + (w_b // 2) + spazio, y_pos, w_b, h_b)
 
-   # --- PARAMETRI SCALA E POSIZIONE ---
+   #Parametri scala e posizione
     ratio = w / 800
     scala_p = ratio * 3
     
@@ -543,7 +532,7 @@ def aggiorna_posizioni_e_scale(w, h,indice_livello=0):
 
     nuovo_boss_visual = None
 
-    # --- GESTIONE DINAMICA BOSS (Grafica) ---
+    # GESTIONE BOSS
     if indice_livello == 0: # GOBLIN
         nuovo_boss_visual = AnimatedSprite("goblin.png", 5, 2, 0, alt_y_goblin, scale=ratio * 2.0)
     
@@ -558,10 +547,10 @@ def aggiorna_posizioni_e_scale(w, h,indice_livello=0):
         nuovo_boss_visual = AnimatedSprite("yeti.png", 5, 1, 0, alt_y_comune, scale=ratio * 1.5)
 
     elif indice_livello == 4: # SERPENTE
-        # MODIFICATO: Usiamo alt_y_comune (250) per farlo stare in basso e non fluttuare
+        # Usiamo alt_y_comune (250) per farlo stare in basso
         nuovo_boss_visual = AnimatedSprite("serpente.png", 5, 1, 0, alt_y_comune, scale=ratio * 1.2)
 
-    # --- DENTRO aggiorna_posizioni_e_scale ---
+  
     if nuovo_boss_visual:
         # Recuperiamo larghezza (w_f) e altezza (h_f) del primo frame
         w_f = nuovo_boss_visual.frames[0].get_width()
@@ -575,12 +564,9 @@ def aggiorna_posizioni_e_scale(w, h,indice_livello=0):
             nuovo_boss_visual.pos = [centro_x + 100, centro_y-50] 
             
         elif indice_livello == 4: # SERPENTE
-            # X: centro - 70 
-            # Y: Centro esatto dell'altezza
             nuovo_boss_visual.pos = [centro_x - 70, centro_y] 
             
         else:
-            # TUTTI GLI ALTRI: Centro perfetto X e Centro perfetto Y
             nuovo_boss_visual.pos = [centro_x, centro_y]
 
     return nuovo_p1, nuovo_p2, nuovo_boss_visual
@@ -592,13 +578,13 @@ path_goblin = os.path.join("goblin.png")
 personaggio1, personaggio2, sprite_temp = aggiorna_posizioni_e_scale(LARGHEZZA, ALTEZZA)
 
 # 2. Creiamo la LOGICA basandoci sulla posizione REALE calcolata per lo sprite
-# Usiamo sprite_temp.pos[1] che ora sarà 10
+
 goblin = Goblin(x=sprite_temp.pos[0] + 60, y=sprite_temp.pos[1])
 
-# 3. Creiamo la GRAFICA del boss (quella che ha il metodo disegna)
+# 3. Creiamo la GRAFICA del boss 
 goblin_visual = sprite_temp
 
-# ------ STATO INIZIALE ----------------
+#INTRODUZIONE
 stato_gioco = "MENU"
 player_corrente = 1
 nome_inserito = ""
@@ -632,7 +618,7 @@ livello0_frasi = [
     ["_Inserite i vostri nomi_"]
 ]
 
-# --- TESTI LIVELLI ---
+#Testi livelli 
 testi_livello = {
     0: ["Benvenuti, avventurieri!", "Il primo mostro vi attende, preparatevi!"],
     1: ["Anubi veglia dall’ombra...", "Camminate con cautela tra le trappole!"],
@@ -641,7 +627,7 @@ testi_livello = {
     4: ["Siete giunti all'ultimo livello.", "Il gioco si ricorda delle vostre scelte ed esse avranno un impatto.", "Preparatevi all’ultima sfida!"]
 }
 
-# --- 3. FUNZIONE PER DISEGNARE LA LABEL DEL LIVELLO ---
+#label per livello
 def draw_label_livello(surface, testo, larghezza, altezza):
     """Disegna una finestra nera semi-trasparente con il testo centrato in basso."""
     h_box = 130
