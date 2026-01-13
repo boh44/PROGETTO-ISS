@@ -116,7 +116,6 @@ class AutoSaveObserver(Observer):
         for p in manager.giocatori:
             dati_da_salvare["giocatori"].append(p.save_state().get_state())
         
-        # --- CORREZIONE MOSTRi ---
         # Usiamo 'boss_attuale' che è il nome che abbiamo dato nel manager
         if manager.boss_attuale:
             # Salviamo lo stato memento del singolo boss
@@ -367,7 +366,6 @@ class Mostro(Subject, ABC):
         super().__init__()
         self.nome = nome
         
-        # --- CORREZIONE QUI ---
         # Assegna direttamente alla variabile interna _max_hp
         self._max_hp = hp  
         
@@ -535,7 +533,6 @@ class GameManager:
 
 
 # FACADE
-
 class GameFacade:
     def __init__(self, manager: GameManager, auto_saver: AutoSaveObserver | None = None):
         self.manager = manager
