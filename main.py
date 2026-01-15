@@ -416,13 +416,13 @@ while running:
                         tab_p1_cliccata = False
                         if inv_p1_aperto:
                             # Cambio tab
-                            if 90 < pos_mouse[1] < 125:
-                                if 20 < pos_mouse[0] < 80: idx_cat_p1 = 0; tab_p1_cliccata = True
-                                elif 80 < pos_mouse[0] < 140: idx_cat_p1 = 1; tab_p1_cliccata = True
-                                elif 140 < pos_mouse[0] < 200: idx_cat_p1 = 2; tab_p1_cliccata = True
+                            if 90 < pos_mouse[1] < 130:
+                                if 20 < pos_mouse[0] < 100: idx_cat_p1 = 0; tab_p1_cliccata = True
+                                elif 100 < pos_mouse[0] < 190: idx_cat_p1 = 1; tab_p1_cliccata = True
+                                elif 190 < pos_mouse[0] < 280: idx_cat_p1 = 2; tab_p1_cliccata = True
 
-                            # Uso pozione SOLO SE È IL SUO TURNO
-                            elif 125 < pos_mouse[1] < 180 and player_turn == 1:
+                            
+                            elif 135 < pos_mouse[1] < 175 and player_turn == 1:
                                 player1 = manager_gioco.giocatori[0]
                                 if categorie_disponibili[idx_cat_p1] == "Cura":
                                     pozione = next((item for item in player1._inventario if item.tipo == "Cura"), None)
@@ -444,13 +444,12 @@ while running:
                         x_inv_p2 = LARGHEZZA - 305
                         if inv_p2_aperto and len(manager_gioco.giocatori) > 1:
                             
-                            if 90 < pos_mouse[1] < 125:
-                                if x_inv_p2 < pos_mouse[0] < x_inv_p2 + 60: idx_cat_p2 = 0; tab_p2_cliccata = True
-                                elif x_inv_p2 + 60 < pos_mouse[0] < x_inv_p2 + 120: idx_cat_p2 = 1; tab_p2_cliccata = True
-                                elif x_inv_p2 + 120 < pos_mouse[0] < x_inv_p2 + 180: idx_cat_p2 = 2; tab_p2_cliccata = True
-
+                            if 90 < pos_mouse[1] < 130:
+                                if x_inv_p2 < pos_mouse[0] < x_inv_p2 + 100: idx_cat_p2 = 0; tab_p2_cliccata = True
+                                elif x_inv_p2 + 100 < pos_mouse[0] < x_inv_p2 + 205: idx_cat_p2 = 1; tab_p2_cliccata = True
+                                elif x_inv_p2 + 205 < pos_mouse[0] < x_inv_p2 + 310: idx_cat_p2 = 2; tab_p2_cliccata = True
                             
-                            elif 125 < pos_mouse[1] < 180 and player_turn == 2:
+                            elif 135 < pos_mouse[1] < 175 and player_turn == 2:
                                 player2 = manager_gioco.giocatori[1]
                                 if categorie_disponibili[idx_cat_p2] == "Cura":
                                     pozione = next((item for item in player2._inventario if item.tipo == "Cura"), None)
@@ -962,7 +961,7 @@ while running:
             draw_text_centered("INV", rect_btn_p1, (255, 215, 0), pygame.font.SysFont("Arial", 10, bold=True))
             if inv_p1_aperto and hud["p1_inv"]: hud["p1_inv"].disegna(screen, cat_p1)
             if stats_p1_aperte and len(manager_gioco.giocatori) > 0: 
-                disegna_pannello_stats(screen, manager_gioco.giocatori[0], 20, 100)
+                disegna_pannello_stats(screen, manager_gioco.giocatori[0], 20, 200)
 
             # 2.   Player 2
             cat_p2 = categorie_disponibili[idx_cat_p2]
@@ -977,7 +976,7 @@ while running:
                 hud["p2_inv"].x = LARGHEZZA - 265
                 hud["p2_inv"].disegna(screen, cat_p2)   
             if stats_p2_aperte and len(manager_gioco.giocatori) > 1: 
-                disegna_pannello_stats(screen, manager_gioco.giocatori[1], LARGHEZZA - 170, 100)
+                disegna_pannello_stats(screen, manager_gioco.giocatori[1], LARGHEZZA - 170, 200)
 
             # 3.  BOSS HEALTH BAR
             if hud.get("boss_health") and manager_gioco.boss_attuale and manager_gioco.boss_attuale.is_alive():
@@ -1055,13 +1054,6 @@ while running:
                         fade_testo_boss = 0
                         mostra_testo_boss = False
                         
-            pygame.draw.rect(screen, (60, 60, 60), rect_btn_p2, border_radius=5)
-            draw_text_centered("INV", rect_btn_p2, (255, 215, 0), pygame.font.SysFont("Arial", 10, bold=True))
-            if inv_p2_aperto and hud["p2_inv"]:
-                hud["p2_inv"].x = LARGHEZZA - 265
-                hud["p2_inv"].disegna(screen, cat_p2)   
-            if stats_p2_aperte and len(manager_gioco.giocatori) > 1: disegna_pannello_stats(screen, manager_gioco.giocatori[1], LARGHEZZA - 170, 100)
-
 
             # OVERLAY LIVELLO (Boss Sconfitto)
             if mostra_messaggio_livello:

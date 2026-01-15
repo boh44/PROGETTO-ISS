@@ -681,7 +681,7 @@ class ArmaturaBase(Armatura):
     def difendi(self, danno: int) -> int: return int(danno * 0.95)
 class ArmaturaElevata(Armatura):
     def difendi(self, danno: int) -> int: return int(danno * 0.08)
-class ArmaturaPiuElevata(Armatura):
+class ArmaturaFinale(Armatura):
     def difendi(self, danno: int) -> int: return int(danno * 0.07)
 
 #ABSTRACT FACTORY
@@ -712,7 +712,7 @@ class Livello3Item(ItemFactory):
 class Livello4Item(ItemFactory):
     def create_arma(self) -> Arma: return HeavySniper()
     def create_pozione(self): return PozioneCura()
-    def create_armatura(self): return ArmaturaPiuElevata()
+    def create_armatura(self): return ArmaturaFinale()
 
 class Livello5Item(ItemFactory):
     def create_arma(self) -> Arma: return Pugnale()

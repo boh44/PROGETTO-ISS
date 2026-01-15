@@ -32,10 +32,10 @@ def disegna_pannello_stats(surface, player, x, y):
     pygame.draw.line(surface, (100, 100, 100), (x + 10, y + 28), (x + 140, y + 28))
     
     stats = [
-        (f"Moralità: {player.moralita}/10", (255, 215, 0)),
-        (f"Danno: {player.danno}/10", (255, 80, 80)),
-        (f"Furtività: {player.furtivita}/10", (100, 200, 255)),
-        (f"Intelligenza: {player.intelligenza}/10", (150, 255, 150))
+        (f"Moralità: {min(player.moralita, 10)}", (255, 215, 0)),
+        (f"Danno: {min(getattr(player, 'danno', 10), 10)}", (255, 80, 80)),
+        (f"Furtività: {min(getattr(player, 'furtivita', 5), 10)}", (100, 200, 255)),
+        (f"Intelligenza: {min(getattr(player, 'intelligenza', 5), 10)}", (150, 255, 150))
     ]
 
     for i, (testo, colore) in enumerate(stats):
@@ -94,44 +94,44 @@ class InventoryUI:
         self.x = x
         self.y = y
         self.player = player
-        self.slot_size = 50
+        self.slot_size = 75
         self.padding = 8
         self.font = pygame.font.SysFont("Arial", 11, bold=True)
         self.font_cat = pygame.font.SysFont("Arial", 10, bold=True)
         self.categorie = ["Attacco", "Cura", "Utility"]
 
     def disegna(self, surface, categoria_attiva):
-        # Sposto tutto l'inventario 40 pixel più in basso rispetto alla barra vita
-        y_offset = self.y + 40 
-        
-        # 1. Box Sfondo (190px larghezza)
-        rect_bg = pygame.Rect(self.x - 10, y_offset, 190, 100) 
-        pygame.draw.rect(surface, (30, 30, 30), rect_bg, border_radius=8)
-        pygame.draw.rect(surface, (200, 200, 200), rect_bg, width=2, border_radius=8)
-
-        # 2. Scritte Categorie
-        for i, cat in enumerate(self.categorie):
-            colore = (255, 215, 0) if cat.lower() == categoria_attiva.lower() else (150, 150, 150)
-            txt_cat = self.font_cat.render(cat.upper(), True, colore)
-            surface.blit(txt_cat, (self.x + (i * 60), y_offset + 10))
-
-        # Filtriamo l'inventario del player
-        oggetti_filtrati = [item for item in self.player._inventario if item.tipo.lower() == categoria_attiva.lower()]
-        
-        current_x = self.x
-        for item in oggetti_filtrati:
-            # Slot posizionato sotto le scritte delle categorie
-            rect_slot = pygame.Rect(current_x, y_offset + 40, self.slot_size, self.slot_size)
+            y_offset = self.y + 40 
             
-            pygame.draw.rect(surface, (50, 50, 50), rect_slot, border_radius=5)
-            pygame.draw.rect(surface, (255, 215, 0), rect_slot, width=1, border_radius=5)
+            rect_bg = pygame.Rect(self.x - 10, y_offset, 280, 100) 
+            pygame.draw.rect(surface, (30, 30, 30), rect_bg, border_radius=8)
+            pygame.draw.rect(surface, (200, 200, 200), rect_bg, width=2, border_radius=8)
 
-            # Nome oggetto
-            txt = self.font.render(item.nome.upper(), True, (255, 255, 255))
-            surface.blit(txt, (rect_slot.centerx - txt.get_width()//2, 
-                               rect_slot.centery - txt.get_height()//2))
             
-            current_x += self.slot_size + self.padding
+            for i, cat in enumerate(self.categorie):
+                colore = (255, 215, 0) if cat.lower() == categoria_attiva.lower() else (150, 150, 150)
+                txt_cat = self.font_cat.render(cat.upper(), True, colore)
+                surface.blit(txt_cat, (self.x + (i * 85), y_offset + 12))
+
+            oggetti_filtrati = [item for item in self.player._inventario if item.tipo.lower() == categoria_attiva.lower()]
+            
+            current_x = self.x
+            self.slot_width = 95 
+            self.slot_height = 38
+            
+            for item in oggetti_filtrati:
+                
+                rect_slot = pygame.Rect(current_x, y_offset + 45, self.slot_width, self.slot_height)
+                
+                pygame.draw.rect(surface, (50, 50, 50), rect_slot, border_radius=5)
+                pygame.draw.rect(surface, (255, 215, 0), rect_slot, width=1, border_radius=5)
+
+                # Nome oggetto centrato
+                txt = self.font.render(item.nome.upper(), True, (255, 255, 255))
+                text_rect = txt.get_rect(center=rect_slot.center)
+                surface.blit(txt, text_rect)
+                
+                current_x += self.slot_width + self.padding
     
     @staticmethod
     def aggiorna_inventario(player, arma=None, pozione=None, armatura=None):
