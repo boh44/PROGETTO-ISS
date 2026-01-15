@@ -141,7 +141,7 @@ while running:
             running = False
         if event.type == pygame.KEYDOWN:    
             if event.key == pygame.K_ESCAPE:
-                if stato_gioco in ["GAMEPLAY", "MAPPA_MONDI", "DIALOGO_NPC","VITTORIA","GAME_OVER"]:
+                if stato_gioco in ["GAMEPLAY", "MAPPA_MONDI", "DIALOGO_NPC","GAME_OVER", "RITORNO_STANZA"]:
                     facade.auto_saver.update(manager_gioco)
                     giocatori_fuggiti = [False, False]
                     stato_gioco = "MENU"
@@ -641,7 +641,19 @@ while running:
                             else:
                                 player_turn = 1 
 
-            
+            elif stato_gioco == "VITTORIA":
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    mostra_label_livello = True
+                    indice_testo_label = 0
+                    indice_lettura = 0
+                    stato_gioco = "RITORNO_STANZA"
+
+            elif stato_gioco == "RITORNO_STANZA":
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if indice_lettura < len(vittoria_frasi) - 1: indice_lettura += 1
+                    else: pass
+
+
     #disegno schermate, fase di rendering
     sfondo_base = None
     if stato_gioco in ["MENU", "SCELTA", "SETTINGS"]: 
@@ -652,6 +664,8 @@ while running:
         sfondo_base = sfondi["l0"]
     elif stato_gioco == "MAPPA_MONDI": 
         sfondo_base = sfondi["mondi"][0]
+    elif stato_gioco == "RITORNO_STANZA": 
+        sfondo_base = sfondi["stanza"]
 
     elif stato_gioco == "GAMEPLAY": 
         sfondo_base = gestore_livelli.get_livello_attuale()
@@ -1165,8 +1179,6 @@ while running:
 
         totale_moralita = sum(p.moralita for p in manager_gioco.giocatori)
         punti_moralita = totale_moralita // len(manager_gioco.giocatori) if manager_gioco.giocatori else 5
-
-      
       
         h = ALTEZZA
         w = LARGHEZZA
@@ -1217,10 +1229,6 @@ while running:
         testo_grado = f"PUREZZA DELL'ANIMA: {punti_moralita}/10"
         draw_text_centered(testo_grado, pygame.Rect(0, y_moralita, w, hint_size), (100, 100, 150), font_bottoni)
 
-        # Istruzione per uscire
-        draw_text_centered("Premi ESC per tornare al menu", pygame.Rect(0, y_hint, w, hint_size), (80, 80, 80), font_bottoni)
-
-
     # 7. Gestione Fade e Transizioni
     if alpha_fade > 0:
         fade_surf = pygame.Surface((LARGHEZZA, ALTEZZA))
@@ -1247,6 +1255,26 @@ while running:
         y_hint = int(h * 0.90)
         draw_text_centered("HAI FALLITO LA MISSIONE",pygame.Rect(0, y_main, w, main_size), (200, 0, 0), font_main)
         draw_text_centered("Premi ESC per tornare al menu", pygame.Rect(0, y_hint, w, sub_size),(100, 100, 100),font_sub)
+
+    #RITORNO NELLA STANZA DOPO LA VITTORIA
+    elif stato_gioco == "RITORNO_STANZA":
+        screen.blit(sfondo_base, (0, 0))
+
+        h_box = 130
+        box_surface = pygame.Surface((LARGHEZZA - 40, h_box), pygame.SRCALPHA)
+        box_surface.fill((0, 0, 0, 180))  # nero semi-trasparente
+        screen.blit( box_surface,(20, ALTEZZA - h_box - 20))
+        # --- TESTO ---
+        font = pygame.font.SysFont("Constantia", int(ALTEZZA * 0.035))
+        frasi = vittoria_frasi[indice_lettura]
+        for i, riga in enumerate(frasi):
+            testo_surf = font.render(riga, True, (255, 255, 255))
+            screen.blit(testo_surf,(40, ALTEZZA - h_box - 10 + i * 30))
+
+        # Istruzione per uscire
+        draw_text_centered("Premi ESC per tornare al menu", pygame.Rect(0, 20, LARGHEZZA, 30), (30, 30, 30), font_bottoni)
+        #draw_text_centered("Premi ESC per tornare al menu", pygame.Rect(0, y_hint, w, hint_size), (80, 80, 80), font_bottoni)
+
 
     pygame.display.flip()
     clock.tick(60)

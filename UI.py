@@ -627,6 +627,13 @@ testi_livello = {
     4: ["Siete giunti all'ultimo livello.", "Il gioco si ricorda delle vostre scelte ed esse avranno un impatto.", "Preparatevi all’ultima sfida!"]
 }
 
+vittoria_frasi = [
+    ["La luce filtra dalle tende.", "Sei tornato nella tua stanza.", "Tutto sembra uguale, eppure sei cambiato."], 
+    ["Le tue scelte ti hanno forgiato","Alcune ricorderai, altre no.","Ma tutte fanno parte di te.",],
+    ["Mentre ti siedi sul tuo letto, una strana pace ti avvolge: sei sopravvissuto.",
+        "E in quel silenzio, percepisci che l’avventura non è mai davvero finita…"]
+]
+
 #label per livello
 def draw_label_livello(surface, testo, larghezza, altezza):
     """Disegna una finestra nera semi-trasparente con il testo centrato in basso."""
