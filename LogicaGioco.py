@@ -108,8 +108,10 @@ class AutoSaveObserver(Observer):
             "livello_corrente": manager.livello_corrente,
             "vite_rimanenti": manager.vite_rimanenti,
             "npc_in_corso": manager.npc_in_corso,
+            "risposta_p1_fatta": manager.risposta_p1_fatta, 
+            "risposta_p2_fatta": manager.risposta_p2_fatta,
             "giocatori": [],
-            "mostri": None  # Cambiato da [] a None perché abbiamo un solo boss attivo
+            "mostri": None,  # Cambiato da [] a None perché abbiamo un solo boss attivo
         }
 
         # Salvataggio Giocatori
@@ -529,6 +531,9 @@ class GameManager:
         self.boss_attuale = None
         self.npc_attuale: NPC | None = None
         self.npc_in_corso = False
+        self.risposta_p1_fatta = False 
+        self.risposta_p2_fatta = False 
+        self.npc_attivo_nome = None    
         print("Log: Dati di gioco resettati.")
 
 
@@ -562,6 +567,9 @@ class GameFacade:
                 self.manager.livello_corrente = contenuto.get("livello_corrente", 1)
                 self.manager.vite_rimanenti = contenuto.get("vite_rimanenti", 6)
                 self.manager.npc_in_corso = contenuto.get("npc_in_corso", False)
+                self.manager.risposta_p1_fatta = contenuto.get("risposta_p1_fatta", False)
+                self.manager.risposta_p2_fatta = contenuto.get("risposta_p2_fatta", False)
+                self.manager.npc_attivo_nome = contenuto.get("npc_attivo_nome", None)
                 lista_giocatori = contenuto.get("giocatori", [])
                 
                 dati_salvatore_mostro = contenuto.get("mostri") 

@@ -230,37 +230,42 @@ while running:
                 # carica partita
                 elif btn_carica.collidepoint(pos_mouse):
                     if facade.carica_da_disco():
-                        # 1. Recupera l'indice corretto dal manager caricato
                         indice_caricato = max(0, manager_gioco.livello_corrente - 1)
                         gestore_livelli.indice_corrente = indice_caricato
                         
-                        # 2. Riattacca gli osservatori ai player ripristinati
                         for p in manager_gioco.giocatori:
                             p.attach(facade.auto_saver)
                             
-                        # 3. Rigenera la GRAFICA (Posizioni e Scale)
                         nuovo_p1, nuovo_p2, nuovo_visual = aggiorna_posizioni_e_scale(LARGHEZZA, ALTEZZA, gestore_livelli.indice_corrente)
                         personaggio1, personaggio2 = nuovo_p1, nuovo_p2
                         boss_visual = nuovo_visual
                         
-                        # 4. CONTROLLO STATO NPC (MEMENTO)
+                    
                         if getattr(manager_gioco, "npc_in_corso", False):
                             stato_gioco = "DIALOGO_NPC"
-                            idx = gestore_livelli.indice_corrente
-                            # Se l'indice è 3 (dopo Chica), carica il Saggio. Se è 4 (dopo Yeti), la Guardia.
-                            npc_attivo = lista_npc[0] if idx == 3 else lista_npc[1]
-                            print(f"Log: Ripristinato dialogo con {npc_attivo.nome}")
+                            
+                            risposta_p1_data = manager_gioco.risposta_p1_fatta
+                            risposta_p2_data = manager_gioco.risposta_p2_fatta
+                            
+                            
+                            nome_salvato = getattr(manager_gioco, "npc_attivo_nome", "")
+                            if nome_salvato == "VecchioSaggio":
+                                npc_attivo = lista_npc[0]
+                            elif nome_salvato == "GuardiaOscura":
+                                npc_attivo = lista_npc[1]
+                            else:
+                                
+                                idx = gestore_livelli.indice_corrente
+                                npc_attivo = lista_npc[0] if idx == 3 else lista_npc[1]
                         else:
-                            # Se non c'è un dialogo, decidiamo se andare in Gameplay o Mappa
                             stato_gioco = "GAMEPLAY" 
                             indice_testo_label = 0
-                        
+                       
+
                         if manager_gioco.boss_attuale and boss_visual:
                             manager_gioco.boss_attuale.pos = [boss_visual.pos[0], boss_visual.pos[1]]
-                            manager_gioco.boss_attuale.attach(facade.auto_saver) # Riattacca observer al boss
-                            print(f"Caricato Boss: {manager_gioco.boss_attuale.nome} con HP: {manager_gioco.boss_attuale.hp}")
+                            manager_gioco.boss_attuale.attach(facade.auto_saver)
                         
-                        # 6. Sincronizza l'HUD finale
                         sincronizza_hud()
                         
                     else: 
@@ -344,6 +349,9 @@ while running:
                         if btn.collidepoint(pos_mouse):
                             npc_attivo.interagisci(manager_gioco.giocatori[0], i)
                             risposta_p1_data = True
+                            manager_gioco.risposta_p1_fatta = True 
+                            manager_gioco.npc_attivo_nome = npc_attivo.nome 
+                            facade.auto_saver.update(manager_gioco) 
                 
                 # Gestione Player 2 (Destra)
                 if not risposta_p2_data and len(manager_gioco.giocatori) > 1:
@@ -351,10 +359,15 @@ while running:
                         if btn.collidepoint(pos_mouse):
                             npc_attivo.interagisci(manager_gioco.giocatori[1], i)
                             risposta_p2_data = True
+                            manager_gioco.risposta_p2_fatta = True # AGGIORNA MANAGER
+                            manager_gioco.npc_attivo_nome = npc_attivo.nome # SALVA NOME
+                            facade.auto_saver.update(manager_gioco) # SALVA SU DISCO ORA
 
                 # Controllo finale: se entrambi hanno risposto (o se il P2 non esiste)
                 if risposta_p1_data and (risposta_p2_data or len(manager_gioco.giocatori) < 2):
                     manager_gioco.npc_in_corso = False
+                    manager_gioco.risposta_p1_fatta = False # RESET PER PROSSIMO LIVELLO
+                    manager_gioco.risposta_p2_fatta = False # RESET PER PROSSIMO LIVELLO
                     # Reset per il prossimo incontro
                     risposta_p1_data = False
                     risposta_p2_data = False
