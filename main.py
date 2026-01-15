@@ -171,10 +171,6 @@ while running:
 
         #gestione tasti
         if event.type == pygame.KEYDOWN:
-            #tasto K 
-            if event.key == pygame.K_k: #se premi K: Uccide il boss
-                if manager_gioco.boss_attuale:
-                    manager_gioco.boss_attuale.hp = 0
 
             # Tasto TAB per le stats del Player 1
             if event.key == pygame.K_TAB:

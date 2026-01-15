@@ -429,7 +429,7 @@ class Mostro(Subject, ABC):
 
 class Goblin(Mostro):
     def __init__(self, x=0, y=0):
-        super().__init__(nome="Goblin", hp=40, danno=10, furtivita=8, intelligenza=4,x=x,y=y)
+        super().__init__(nome="Goblin", hp=40, danno=10, furtivita=8, intelligenza=5,x=x,y=y)
         self.pos = [x, y] # Ci serve per sapere dove disegnarlo nella GUI
 
     def attacca(self, player) -> None:
