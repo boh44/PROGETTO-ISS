@@ -1,4 +1,3 @@
-from operator import pos
 import pygame
 import sys
 import os
@@ -141,10 +140,12 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:    
-            if event.key == pygame.K_ESCAPE:    #Se il tasto premuto è ESC, e lo stato del gioco è VITTORIA o GAME_OVER
-                if stato_gioco in ["VITTORIA", "GAME_OVER"]:
-                    manager_gioco.resetGameData()
-                    stato_gioco = "MENU" 
+            if event.key == pygame.K_ESCAPE:
+                if stato_gioco in ["GAMEPLAY", "MAPPA_MONDI", "DIALOGO_NPC","VITTORIA","GAME_OVER"]:
+                    facade.auto_saver.update(manager_gioco)
+                    giocatori_fuggiti = [False, False]
+                    stato_gioco = "MENU"
+                    print("Log: Ritorno al menu principale. Stato salvato.")
 
         #ridimensionamento finestra
         if event.type == pygame.VIDEORESIZE:
@@ -196,7 +197,14 @@ while running:
 
         #Gestione click mouse
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  #Controlla se il mouse viene premuto con il tasto sinistro
-
+            if stato_gioco in ["INTRODUZIONE", "LIVELLO_0", "SCELTA_MORALITA"]:
+                if btn_back_to_menu.collidepoint(pos_mouse):
+                    manager_gioco.resetGameData() 
+                    player_corrente = 1
+                    nome_inserito = ""
+                    input_nome_attivo = False
+                    stato_gioco = "MENU"
+                    continue
             #menù
             if stato_gioco == "MENU":   #Cambia lo stato di gioco in base al pulsante cliccato: avvia nuova partita, apri le impostazioni o esci dal gioco.
                 if btn_start.collidepoint(pos_mouse): stato_gioco = "SCELTA"
@@ -702,7 +710,9 @@ while running:
         if input_nome_attivo:   #far vedere sullo schermo il nome mentre lo scrivi, con il cursore lampeggiante.
             txt_in = font_bottoni.render(f"P{player_corrente} Nome: {nome_inserito}|", True, (255, 255, 0))
             screen.blit(txt_in, (LARGHEZZA // 2 - txt_in.get_width() // 2, ALTEZZA - 55))
-
+        #indietro
+        pygame.draw.rect(screen, (192, 57, 43), btn_back_to_menu, border_radius=8)
+        draw_text_centered("INDIETRO", btn_back_to_menu, (255, 255, 255), font_piccolo)
     elif stato_gioco == "SCELTA_MORALITA":
        
         draw_text_centered("Che individuo sei davvero? Un eroe altruista, un mercenario egoista o un'anima indifferente?", pygame.Rect(0, ALTEZZA//4, LARGHEZZA, 50), (255, 255, 255), font_piccolo)

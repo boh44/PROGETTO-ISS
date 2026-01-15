@@ -13,7 +13,7 @@ clock = pygame.time.Clock()
 alpha_fade = 0  # Gestisce la trasparenza del velo nero
 fase_transizione = None 
 colore_transizione = (0, 0, 0) # Default nero
-
+btn_back_to_menu = pygame.Rect(20, 20, 100, 40)
 def disegna_pannello_stats(surface, player, x, y):
     
     sfondo = pygame.Surface((150, 110), pygame.SRCALPHA)
