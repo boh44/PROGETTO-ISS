@@ -217,7 +217,7 @@ while running:
                     manager_gioco.resetGameData()
                     if facade.auto_saver: facade.auto_saver.history = []
                     print("Log: Reset eseguito.")
-                elif btn_back_menu.collidepoint(pos_mouse):    
+                elif btn_back_to_menu.collidepoint(pos_mouse):
                     stato_gioco = "MENU"
 
             #Scelta
@@ -274,7 +274,10 @@ while running:
                         
                     else: 
                         print("Errore: Nessun salvataggio trovato.")
-
+                
+                elif btn_back_to_menu.collidepoint(pos_mouse):
+                    stato_gioco = "MENU"
+                    
             #Introduzione e livello 0
             elif stato_gioco == "INTRODUZIONE":
                 indice_lettura += 1
@@ -688,6 +691,8 @@ while running:
         col_car = (41, 128, 185) if facade.esiste_salvataggio() else (50, 50, 50)
         pygame.draw.rect(screen, col_car, btn_carica, border_radius=8)
         draw_text_centered("CARICA PARTITA", btn_carica, (255, 255, 255) if facade.esiste_salvataggio() else (150,150,150))
+        pygame.draw.rect(screen, (192, 57, 43), btn_back_to_menu, border_radius=8)
+        draw_text_centered("INDIETRO", btn_back_to_menu, (255, 255, 255), font_piccolo)
 
     elif stato_gioco in ["INTRODUZIONE", "LIVELLO_0"]:
         h_box = 130
@@ -706,12 +711,18 @@ while running:
         #indietro
         pygame.draw.rect(screen, (192, 57, 43), btn_back_to_menu, border_radius=8)
         draw_text_centered("INDIETRO", btn_back_to_menu, (255, 255, 255), font_piccolo)
+
     elif stato_gioco == "SCELTA_MORALITA":
-       
-        draw_text_centered("Che individuo sei davvero? Un eroe altruista, un mercenario egoista o un'anima indifferente?", pygame.Rect(0, ALTEZZA//4, LARGHEZZA, 50), (255, 255, 255), font_piccolo)
+        font_domanda = pygame.font.SysFont("Constantia", int(ALTEZZA * 0.050), bold=True) 
+        font_descrizione = pygame.font.SysFont("Constantia", int(ALTEZZA * 0.035), bold=False) 
+        rect_domanda = pygame.Rect(0, ALTEZZA // 4 - 50, LARGHEZZA, 60)
+        draw_text_centered("Che individuo sei davvero?", rect_domanda, (255, 255, 255), font_domanda)
+        rect_descrizione = pygame.Rect(0, ALTEZZA // 4 + 25, LARGHEZZA, 50)
+        draw_text_centered("Un eroe altruista, un mercenario egoista o un'anima indifferente?", 
+                           rect_descrizione, (255, 255, 255), font_descrizione)
         for btn, txt, col in [(btn_eroe, "EROE", (46, 204, 113)), (btn_mercenario, "MERCENARIO", (231, 76, 60)), (btn_indifferente, "NEUTRALE", (149, 165, 166))]:
-            pygame.draw.rect(screen, col, btn, border_radius=8)  #Disegna i pulsanti per scegliere la moralità con i relativi colori
-            draw_text_centered(txt, btn, (255, 255, 255))
+            pygame.draw.rect(screen, col, btn, border_radius=8)
+            draw_text_centered(txt, btn, (255, 255, 255), font_piccolo)
 
     elif stato_gioco == "MAPPA_MONDI":
         screen.blit(sfondi["mondi"][gestore_livelli.indice_corrente], (0, 0)) # Prima sfondo
@@ -721,7 +732,6 @@ while running:
         screen.blit(overlay, (0, 0))
         draw_text_centered("I MONDI SI ALLINEANO", pygame.Rect(0, ALTEZZA // 2 - 50, LARGHEZZA, 50), (255, 255, 255), font_titolo)
         
-        # Calcolo del numero livello: indice 0 -> Livello 1, indice 1 -> Livello 2...ecc
         num_livello = gestore_livelli.indice_corrente + 1
         f_istruzioni = pygame.font.SysFont("Constantia", 22, italic=True)
         testo_dinamico = f"Clicca per iniziare la tua avventura nel Livello {num_livello}"
