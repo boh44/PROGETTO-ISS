@@ -416,51 +416,48 @@ while running:
                         # player 1 inventario
                         tab_p1_cliccata = False
                         if inv_p1_aperto:
-                            if 90 < pos_mouse[1] < 125: 
+                            # Cambio tab
+                            if 90 < pos_mouse[1] < 125:
                                 if 20 < pos_mouse[0] < 80: idx_cat_p1 = 0; tab_p1_cliccata = True
                                 elif 80 < pos_mouse[0] < 140: idx_cat_p1 = 1; tab_p1_cliccata = True
                                 elif 140 < pos_mouse[0] < 200: idx_cat_p1 = 2; tab_p1_cliccata = True
-                            
-                            #Uso Pozione 
-                            elif 125 < pos_mouse[1] < 180: # Area degli slot oggetti
+
+                            # Uso pozione SOLO SE È IL SUO TURNO
+                            elif 125 < pos_mouse[1] < 180 and player_turn == 1:
                                 player1 = manager_gioco.giocatori[0]
                                 if categorie_disponibili[idx_cat_p1] == "Cura":
-                                    # Cerca la prima pozione di tipo 'Cura' nell'inventario
                                     pozione = next((item for item in player1._inventario if item.tipo == "Cura"), None)
                                     if pozione:
-                                        player1.usa_pozione(pozione) # Applica i benefici (HP)
-                                        player1.remove_item(pozione) # Scompare dall'inventario
-                                        
-                                        # Feedback visivo
+                                        player1.usa_pozione(pozione)
+                                        player1.remove_item(pozione)
                                         testo_turno_boss = f"{player1.nome} usa una Pozione!"
                                         colore_banner_attuale = (0, 255, 150)
                                         mostra_testo_boss = True
                                         timer_testo_boss = pygame.time.get_ticks()
                                         fade_testo_boss = 255
-                                        tab_p1_cliccata = True # Impedisce di chiudere l'inv col click sotto
+                                        tab_p1_cliccata = True
 
                         if not tab_p1_cliccata and rect_btn_p1.collidepoint(pos_mouse):
                             inv_p1_aperto = not inv_p1_aperto
                             
                         #player 2 inventario
                         tab_p2_cliccata = False
-                        x_inv_p2 = LARGHEZZA - 305 
+                        x_inv_p2 = LARGHEZZA - 305
                         if inv_p2_aperto and len(manager_gioco.giocatori) > 1:
-                            # 1. Controllo Cambio Tab
+                            
                             if 90 < pos_mouse[1] < 125:
                                 if x_inv_p2 < pos_mouse[0] < x_inv_p2 + 60: idx_cat_p2 = 0; tab_p2_cliccata = True
                                 elif x_inv_p2 + 60 < pos_mouse[0] < x_inv_p2 + 120: idx_cat_p2 = 1; tab_p2_cliccata = True
                                 elif x_inv_p2 + 120 < pos_mouse[0] < x_inv_p2 + 180: idx_cat_p2 = 2; tab_p2_cliccata = True
+
                             
-                            #Uso Pozione P2
-                            elif 125 < pos_mouse[1] < 180:
+                            elif 125 < pos_mouse[1] < 180 and player_turn == 2:
                                 player2 = manager_gioco.giocatori[1]
                                 if categorie_disponibili[idx_cat_p2] == "Cura":
                                     pozione = next((item for item in player2._inventario if item.tipo == "Cura"), None)
                                     if pozione:
                                         player2.usa_pozione(pozione)
                                         player2.remove_item(pozione)
-                                        
                                         testo_turno_boss = f"{player2.nome} usa una Pozione!"
                                         colore_banner_attuale = (0, 255, 150)
                                         mostra_testo_boss = True
