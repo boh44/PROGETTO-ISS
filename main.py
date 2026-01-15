@@ -217,7 +217,7 @@ while running:
                     manager_gioco.resetGameData()
                     if facade.auto_saver: facade.auto_saver.history = []
                     print("Log: Reset eseguito.")
-                elif btn_back_to_menu.collidepoint(pos_mouse):
+                elif btn_back_menu.collidepoint(pos_mouse):
                     stato_gioco = "MENU"
 
             #Scelta
@@ -1130,7 +1130,7 @@ while running:
                 draw_text_centered(opz.testo, btn, (220, 240, 255), f_opzioni)
         else:
             pygame.draw.rect(screen, (10, 30, 10, 180), rect_p1, border_radius=12)
-            draw_text_centered("SCELTA CONFERMATA ✓", rect_p1, (0, 255, 150), f_domanda)
+            draw_text_centered("SCELTA CONFERMATA", rect_p1, (0, 255, 150), f_domanda)
 
         #lato player 2 destra
         x_p2 = int(LARGHEZZA * 0.51) 
@@ -1157,7 +1157,7 @@ while running:
                     draw_text_centered(opz.testo, btn, (255, 230, 220), f_opzioni)
             else:
                 pygame.draw.rect(screen, (30, 10, 10, 180), rect_p2, border_radius=12)
-                draw_text_centered("SCELTA CONFERMATA ✓", rect_p2, (255, 150, 0), f_domanda)
+                draw_text_centered("SCELTA CONFERMATA", rect_p2, (255, 150, 0), f_domanda)
 
 
     elif stato_gioco == "VITTORIA":
