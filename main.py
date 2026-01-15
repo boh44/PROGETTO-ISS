@@ -220,6 +220,9 @@ while running:
             elif stato_gioco == "SCELTA":
                 #Nuova partita
                 if btn_nuovo.collidepoint(pos_mouse):
+                    if os.path.exists("salvataggio_gioco.json"):
+                        os.remove("salvataggio_gioco.json")
+                    manager_gioco.resetGameData()
                     manager_gioco.livello_corrente = 1
                     gestore_livelli.indice_corrente = 0
                     stato_gioco, indice_lettura = "INTRODUZIONE", 0
@@ -304,6 +307,7 @@ while running:
                         indice_lettura = 6 
                     else:
                         stato_gioco = "MAPPA_MONDI"
+                        player_corrente = 1
                         input_nome_attivo = False
                         gestore_livelli.indice_corrente = 0
 
