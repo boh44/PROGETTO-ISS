@@ -712,12 +712,12 @@ class Livello3Item(ItemFactory):
 class Livello4Item(ItemFactory):
     def create_arma(self) -> Arma: return HeavySniper()
     def create_pozione(self): return PozioneCura()
-    def create_armatura(self): return ArmaturaFinale()
+    def create_armatura(self): return ArmaturaElevata()
 
 class Livello5Item(ItemFactory):
     def create_arma(self) -> Arma: return Pugnale()
     def create_pozione(self): return KitPozioniFinale()
-    def create_armatura(self): return ArmaturaElevata()
+    def create_armatura(self): return ArmaturaFinale()
 
 
 # 
