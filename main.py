@@ -1124,7 +1124,7 @@ while running:
             val = abs(int(math.sin(pygame.time.get_ticks() * 0.005) * 50))
             pygame.draw.rect(screen, (0, 150 + val, 255), rect_p1, 3, border_radius=12)
 
-            testo_da_disegnare = f"{manager_gioco.giocatori[0].nome}: {npc_attivo.domanda}"
+            testo_da_disegnare = f"{npc_attivo.nome}: {npc_attivo.domanda}"
             draw_text_wrapped(screen, testo_da_disegnare, rect_p1, (255, 255, 255), f_domanda)
 
             for i, opz in enumerate(npc_attivo.opzioni):
@@ -1151,7 +1151,7 @@ while running:
                 pygame.draw.rect(screen, (255, 100 + val, 0), rect_p2, 3, border_radius=12)
 
                 # testo pulito p2
-                testo_da_disegnare_p2 = f"{manager_gioco.giocatori[1].nome}: {npc_attivo.domanda}"
+                testo_da_disegnare_p2 = f"{npc_attivo.nome}: {npc_attivo.domanda}"
                 draw_text_wrapped(screen, testo_da_disegnare_p2, rect_p2, (255, 255, 255), f_domanda)
 
                 for i, opz in enumerate(npc_attivo.opzioni):
